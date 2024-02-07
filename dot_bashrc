@@ -133,6 +133,13 @@ else
     echo "chezmoi not installed so dotfiles won't be synced"
 fi
 
+# Install global tool specified by asdf in .tool-versions
+if command -v asdf &> /dev/null; then
+    asdf install
+else
+    echo "asdf not installed"
+fi
+
 # Add GOPATH to path
 # go
 export GOPATH=$(asdf where golang)/packages
