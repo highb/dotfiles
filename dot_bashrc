@@ -130,3 +130,12 @@ export PATH="${PATH}:$HOME/bin"
 export GOPATH=$(asdf where golang)/packages
 export GOROOT=$(asdf where golang)/go
 export PATH="${PATH}:$(go env GOPATH)/bin"
+
+# Pull latest dotfiles
+if command -v chezmoi &> /dev/null; then
+    chezmoi update
+else
+    echo "chezmoi not installed so dotfiles won't be synced"
+fi
+
+chezmoi update
