@@ -133,9 +133,8 @@ export PATH="${PATH}:$(go env GOPATH)/bin"
 
 # Pull latest dotfiles
 if command -v chezmoi &> /dev/null; then
+    echo "Updating dotfiles..."
     chezmoi update
 else
     echo "chezmoi not installed so dotfiles won't be synced"
 fi
-
-chezmoi update
