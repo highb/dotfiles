@@ -125,12 +125,6 @@ export PATH="${PATH}:$HOME/bin"
 # Configure asdf-vm completions
 . "$HOME/.asdf/completions/asdf.bash"
 
-# Add GOPATH to path
-# go
-export GOPATH=$(asdf where golang)/packages
-export GOROOT=$(asdf where golang)/go
-export PATH="${PATH}:$(go env GOPATH)/bin"
-
 # Pull latest dotfiles
 if command -v chezmoi &> /dev/null; then
     echo "Updating dotfiles..."
@@ -138,3 +132,9 @@ if command -v chezmoi &> /dev/null; then
 else
     echo "chezmoi not installed so dotfiles won't be synced"
 fi
+
+# Add GOPATH to path
+# go
+export GOPATH=$(asdf where golang)/packages
+export GOROOT=$(asdf where golang)/go
+export PATH="${PATH}:$(go env GOPATH)/bin"
