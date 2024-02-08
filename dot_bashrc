@@ -149,3 +149,7 @@ export PATH="${PATH}:$(go env GOPATH)/bin"
 # Aliases
 # I struggle to remember the name Chezmoi for some reason. I think I have a French allergy.
 alias dotfile=chezmoi
+
+if [[ -f .work.bashrc ]]; then
+    source .work.bashrc
+fi
