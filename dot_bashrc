@@ -145,3 +145,7 @@ fi
 export GOPATH=$(asdf where golang)/packages
 export GOROOT=$(asdf where golang)/go
 export PATH="${PATH}:$(go env GOPATH)/bin"
+
+# Aliases
+# I struggle to remember the name Chezmoi for some reason. I think I have a French allergy.
+alias dotfile=chezmoi
