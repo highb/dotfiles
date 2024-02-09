@@ -137,3 +137,7 @@ alias dotfile=chezmoi
 if [[ -f .work.zshrc ]]; then
     source .work.zshrc
 fi
+
+# Start startup prompt
+eval "$(starship init zsh)"
+
