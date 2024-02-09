@@ -119,12 +119,6 @@ fi
 # Add home bin dir to PATH so my scripts are available
 export PATH="${PATH}:$HOME/bin"
 
-# Initialize asdf-vm https://asdf-vm.com/guide/getting-started.html
-. "$HOME/.asdf/asdf.sh"
-
-# Configure asdf-vm completions
-. "$HOME/.asdf/completions/asdf.bash"
-
 # Pull latest dotfiles
 if command -v chezmoi &> /dev/null; then
     echo "Updating dotfiles..."
@@ -133,23 +127,8 @@ else
     echo "chezmoi not installed so dotfiles won't be synced"
 fi
 
-# Install global tool specified by asdf in .tool-versions
-if command -v asdf &> /dev/null; then
-    asdf install
-else
-    echo "asdf not installed"
-fi
-
-# Add GOPATH to path
-# go
-export GOPATH=$(asdf where golang)/packages
-export GOROOT=$(asdf where golang)/go
-export PATH="${PATH}:$(go env GOPATH)/bin"
-
 # Aliases
 # I struggle to remember the name Chezmoi for some reason. I think I have a French allergy.
 alias dotfile=chezmoi
 
-if [[ -f .work.bashrc ]]; then
-    source .work.bashrc
-fi
+echo ".bashrc complete! You sure you didn't want zsh?"
