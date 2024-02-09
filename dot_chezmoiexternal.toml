@@ -1,0 +1,10 @@
+[".oh-my-zsh"]
+    type = "archive"
+    url = "https://github.com/ohmyzsh/ohmyzsh/archive/fff073b55defed72a0a1aac4e853b165f208735b.tar.gz"
+    exact = true
+    stripComponents = 1
+[".oh-my-zsh/custom/plugins/zsh-syntax-highlighting"]
+    type = "archive"
+    url = "https://github.com/zsh-users/zsh-syntax-highlighting/archive/0.8.0.tar.gz"
+    exact = true
+    stripComponents = 1
