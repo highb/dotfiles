@@ -101,10 +101,10 @@ source $ZSH/oh-my-zsh.sh
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
 # Add home bin dir to PATH so my scripts are available
-export PATH="$HOME/bin:${PATH}"
+export PATH="${HOME}/bin:${PATH}"
 
 # Initialize asdf-vm https://asdf-vm.com/guide/getting-started.html
-. "$HOME/.asdf/asdf.sh"
+. "${HOME}/.asdf/asdf.sh"
 
 # Pull latest dotfiles
 if command -v chezmoi &> /dev/null; then
