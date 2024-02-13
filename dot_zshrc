@@ -131,8 +131,8 @@ export PATH="${PATH}:$(go env GOPATH)/bin"
 # I struggle to remember the name Chezmoi for some reason. I think I have a French allergy.
 alias dotfile=chezmoi
 
-if [[ -f .work.zshrc ]]; then
-    source .work.zshrc
+if [[ -f "${HOME}/.work.zshrc" ]]; then
+    source "${HOME}/.work.zshrc"
 fi
 
 # Start startup prompt
