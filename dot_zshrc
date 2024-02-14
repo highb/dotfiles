@@ -130,6 +130,15 @@ fi
 #    echo "asdf not installed"
 #fi
 
+# Initialize mise and install global tool specified by .tool-versions, if available
+if [[ -f .local/bin/mise ]]; then
+    eval "$(~/.local/bin/mise activate zsh)"
+    mise activate --shims
+    mise install
+else
+    echo "mise not installed"
+fi
+
 # Add GOPATH to path
 # go
 #export GOPATH=$(asdf where golang)/packages
@@ -154,5 +163,3 @@ export ANSIBLE_COW_SELECTION=tux
 # ENV overrides for shell
 export PAGER=less
 
-eval "$(~/.local/bin/mise activate zsh)"
-mise activate --shims
