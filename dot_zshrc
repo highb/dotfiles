@@ -155,3 +155,4 @@ export ANSIBLE_COW_SELECTION=tux
 export PAGER=less
 
 eval "$(~/.local/bin/mise activate zsh)"
+mise activate --shims
