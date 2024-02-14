@@ -140,4 +140,4 @@ eval "$(starship init zsh)"
 
 # Ansible config
 # Cow as in cowsay
-ANSIBLE_COW_SELECTION=tux
+export ANSIBLE_COW_SELECTION=tux
