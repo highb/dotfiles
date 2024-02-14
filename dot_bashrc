@@ -132,3 +132,4 @@ fi
 alias dotfile=chezmoi
 
 echo ".bashrc complete! You sure you didn't want zsh?"
+. "/home/highb/.local/share/mise/installs/rust/1.76.0/env"
