@@ -150,3 +150,6 @@ eval "$(starship init zsh)"
 # Ansible config
 # Cow as in cowsay
 export ANSIBLE_COW_SELECTION=tux
+
+# ENV overrides for shell
+export PAGER=less
