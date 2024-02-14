@@ -135,9 +135,9 @@ fi
 
 # Add GOPATH to path
 # go
-# export GOPATH=$(asdf where golang)/packages
-# export GOROOT=$(asdf where golang)/go
-# export PATH="${PATH}:$(go env GOPATH)/bin"
+export GOPATH=$(asdf where golang)/packages
+export GOROOT=$(asdf where golang)/go
+export PATH="${PATH}:$(go env GOPATH)/bin"
 
 # Aliases
 # I struggle to remember the name Chezmoi for some reason. I think I have a French allergy.
@@ -156,3 +156,5 @@ export ANSIBLE_COW_SELECTION=tux
 
 # ENV overrides for shell
 export PAGER=less
+eval "$(~/.local/bin/mise activate zsh)"
+eval "$(~/.local/bin/mise activate zsh)"
