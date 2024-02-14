@@ -1,6 +1,9 @@
 [tools]
 go = "1.21.6"
 rust = "latest"
+"cargo:eza" = "latest"
+"cargo:bat" = "latest"
+"cargo:cargo-binstall" = "latest"
 
 [settings]
 experimental = true
