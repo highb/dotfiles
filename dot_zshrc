@@ -138,3 +138,6 @@ fi
 # Start startup prompt
 eval "$(starship init zsh)"
 
+# Ansible config
+# Cow as in cowsay
+ANSIBLE_COW_SELECTION=tux
