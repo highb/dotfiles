@@ -1,6 +1,4 @@
 [tools]
-go = "1.21.6"
-rust = "stable"
 "cargo:eza" = "0.18.2"
 "cargo:bat" = "0.24.0"
 "cargo:cargo-binstall" = "1.6.3"
