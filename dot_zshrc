@@ -115,10 +115,16 @@ else
 fi
 
 # Packaging parking lot: where things that need to be installed go (for now)
+# 
 # python-build on ubuntu variants https://github.com/pyenv/pyenv/wiki#suggested-build-environment
+#
 # sudo apt update; sudo apt install build-essential libssl-dev zlib1g-dev \
 # libbz2-dev libreadline-dev libsqlite3-dev curl \
 # libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+#
+# vagrant virtualbox plugi
+#
+# sudo apt-get install linux-headers-$(uname -r) build-essential dkms
 
 # Install global tool specified by asdf in .tool-versions
 if command -v asdf &> /dev/null; then
