@@ -106,9 +106,6 @@ export PATH="${HOME}/bin:${PATH}"
 # Initialize asdf-vm https://asdf-vm.com/guide/getting-started.html
 #. "${HOME}/.asdf/asdf.sh"
 
-# Initialize mise https://mise.jdx.dev/getting-started.html
-eval "$(~/.local/bin/mise activate zsh)"
-
 # Pull latest dotfiles
 if command -v chezmoi &> /dev/null; then
     echo "Updating dotfiles..."
@@ -135,9 +132,9 @@ fi
 
 # Add GOPATH to path
 # go
-export GOPATH=$(asdf where golang)/packages
-export GOROOT=$(asdf where golang)/go
-export PATH="${PATH}:$(go env GOPATH)/bin"
+#export GOPATH=$(asdf where golang)/packages
+#export GOROOT=$(asdf where golang)/go
+#export PATH="${PATH}:$(go env GOPATH)/bin"
 
 # Aliases
 # I struggle to remember the name Chezmoi for some reason. I think I have a French allergy.
@@ -156,5 +153,5 @@ export ANSIBLE_COW_SELECTION=tux
 
 # ENV overrides for shell
 export PAGER=less
-eval "$(~/.local/bin/mise activate zsh)"
+
 eval "$(~/.local/bin/mise activate zsh)"
