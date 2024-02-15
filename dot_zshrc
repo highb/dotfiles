@@ -133,8 +133,8 @@ fi
 # Initialize mise and install global tool specified by .tool-versions, if available
 if [[ -f .local/bin/mise ]]; then
     eval "$(~/.local/bin/mise activate zsh)"
-    mise activate --shims
     mise install
+    mise activate --shims
 else
     echo "mise not installed"
 fi
