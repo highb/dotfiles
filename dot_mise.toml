@@ -1,0 +1,11 @@
+[tools]
+"rust" = "1.76.0"
+"cargo:eza" = "0.18.2"
+"cargo:bat" = "0.24.0"
+"cargo:cargo-binstall" = "1.6.3"
+"golang" = "1.21.6"
+"chezmoi" = "2.46.0"
+"kubectl" = "1.28.5"
+"helm" = "3.14.0"
+"python" = "3.12.2"
+
