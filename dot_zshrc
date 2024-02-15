@@ -134,7 +134,8 @@ fi
 if [[ -f .local/bin/mise ]]; then
     eval "$(~/.local/bin/mise activate zsh)"
     mise install
-    eval "$(mise activate --shims)"
+    mise activate --shims
+    export PATH="/home/highb/.local/share/mise/shims:$PATH"
 else
     echo "mise not installed"
 fi
