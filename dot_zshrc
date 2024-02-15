@@ -156,6 +156,9 @@ fi
 # Start startup prompt
 eval "$(starship init zsh)"
 
+# zoxide alternative cd for fast switching
+eval "$(zoxide init zsh)"
+
 # Ansible config
 # Cow as in cowsay
 export ANSIBLE_COW_SELECTION=tux
