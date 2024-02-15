@@ -9,5 +9,6 @@
 "helm" = "3.14.0"
 "python" = "3.12.2"
 fzf = "0.46.1"
-"zoxide" = "0.9.3"
+"cargo:zoxide" = "0.9.3"
+zoxide = "0.9.3"
 
