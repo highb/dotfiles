@@ -1,0 +1,19 @@
+[credential "https://github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
+[user]
+	name = Brandon High
+	email = 759848+highb@users.noreply.github.com
+	signingkey = ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJjmSuai7qgc96vL5VKBGT5xlA7Q87cAmjyL/+m1vVTW
+
+[gpg]
+  format = ssh
+
+[gpg "ssh"]
+  program = "/opt/1Password/op-ssh-sign"
+
+[commit]
+  gpgsign = true
+
+[includeIf "gitdir:~/src/ridewithgps/"]
+  path = ~/src/ridewithgps/.gitconfig
