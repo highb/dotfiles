@@ -149,6 +149,10 @@ fi
 # Aliases
 # I struggle to remember the name Chezmoi for some reason. I think I have a French allergy.
 alias dotfile=chezmoi
+# No reason to use vim if nvim is installed
+if command -v nvim &> /dev/null; then 
+    alias vim=nvim
+fi
 
 if [[ -f "${HOME}/.work.zshrc" ]]; then
     source "${HOME}/.work.zshrc"
