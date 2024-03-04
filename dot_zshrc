@@ -131,14 +131,14 @@ fi
 #fi
 
 # Initialize mise and install global tool specified by .tool-versions, if available
-if [[ -f .local/bin/mise ]]; then
-    eval "$(~/.local/bin/mise activate zsh)"
-    mise install
-    mise activate --shims
-    export PATH="/home/highb/.local/share/mise/shims:$PATH"
-else
-    echo "mise not installed"
-fi
+#if [[ -f .local/bin/mise ]]; then
+#    eval "$(~/.local/bin/mise activate zsh)"
+#    mise install
+#    mise activate --shims
+#    export PATH="/home/highb/.local/share/mise/shims:$PATH"
+#else
+#    echo "mise not installed"
+#fi
 
 # Add GOPATH to path
 # go
