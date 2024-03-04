@@ -123,6 +123,8 @@ fi
 # libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
 #
 
+. "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
+
 # Install global tool specified by asdf in .tool-versions
 #if command -v asdf &> /dev/null; then
 #    asdf install
@@ -131,14 +133,14 @@ fi
 #fi
 
 # Initialize mise and install global tool specified by .tool-versions, if available
-#if [[ -f .local/bin/mise ]]; then
-#    eval "$(~/.local/bin/mise activate zsh)"
-#    mise install
-#    mise activate --shims
-#    export PATH="/home/highb/.local/share/mise/shims:$PATH"
-#else
-#    echo "mise not installed"
-#fi
+if [[ -f .local/bin/mise ]]; then
+    eval "$(~/.local/bin/mise activate zsh)"
+    mise install
+    mise activate --shims
+    export PATH="${HOME}/.local/share/mise/shims:$PATH"
+else
+    echo "mise not installed"
+fi
 
 # Add GOPATH to path
 # go
@@ -164,6 +166,9 @@ eval "$(starship init zsh)"
 # zoxide alternative cd for fast switching
 eval "$(zoxide init zsh)"
 
+# direnv for .envrc support
+eval "$(direnv hook zsh)"
+
 # Ansible config
 # Cow as in cowsay
 export ANSIBLE_COW_SELECTION=tux
@@ -171,3 +176,5 @@ export ANSIBLE_COW_SELECTION=tux
 # ENV overrides for shell
 export PAGER=less
 
+alias nix-home-manager-edit="code .config/home-manager/home.nix"
+alias fh-shell='nix shell "https://flakehub.com/f/DeterminateSystems/fh/*.tar.gz"'

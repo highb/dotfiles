@@ -5,3 +5,4 @@ experimental = true
 node = "latest"
 "npm:markdownlint" = "latest"
 "npm:prettier" = "latest"
+direnv = "latest"
