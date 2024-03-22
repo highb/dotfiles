@@ -132,15 +132,19 @@ fi
 #    echo "asdf not installed"
 #fi
 
+MISE_PATH="${HOME}/.local/share/mise/shims"
 # Initialize mise and install global tool specified by .tool-versions, if available
 if [[ -f .local/bin/mise ]]; then
     eval "$(~/.local/bin/mise activate zsh)"
     mise install
     mise activate --shims
-    export PATH="${HOME}/.local/share/mise/shims:$PATH"
+    export PATH="${MISE_PATH}:${PATH}"
 else
     echo "mise not installed"
 fi
+
+# Load nix home-manager
+. "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
 
 # Add GOPATH to path
 # go
@@ -164,10 +168,17 @@ fi
 eval "$(starship init zsh)"
 
 # zoxide alternative cd for fast switching
-eval "$(zoxide init zsh)"
+# TODO Figure out why mise isn't working right from .zshrc
+eval "$(${MISE_PATH}/zoxide init zsh)"
 
 # direnv for .envrc support
-eval "$(direnv hook zsh)"
+# TODO Figure out why mise isn't working right from .zshrc
+eval "$(${MISE_PATH}/direnv hook zsh)"
+
+# cocogitto for conventional commits https://docs.cocogitto.io/
+# TODO Figure out why mise isn't working right from .zshrc
+mkdir -p ~/.zfunc
+cog generate-completions zsh > ~/.zfunc/_cog
 
 # Ansible config
 # Cow as in cowsay
@@ -178,4 +189,8 @@ export PAGER=less
 
 alias nix-home-manager-edit="code .config/home-manager/home.nix"
 alias fh-shell='nix shell "https://flakehub.com/f/DeterminateSystems/fh/*.tar.gz"'
+# Use the plugin
 alias docker-compose='docker compose'
+#alias docker-compose='podman-compose'
+alias ai-rawdog='rawdog --leash'
+export PATH=$PATH:$HOME/.garden/bin

@@ -1,12 +1,17 @@
+# Get editor completions based on the config schema
+"$schema" = 'https://starship.rs/config-schema.json'
+
 [character]
 success_symbol = "[>](bold green)"
 error_symbol = "[x](bold red)"
 vimcmd_symbol = "[<](bold green)"
 
 [git_commit]
+disabled = false
 tag_symbol = " tag "
 
 [git_status]
+disabled = false
 ahead = ">"
 behind = "<"
 diverged = "<>"
@@ -14,6 +19,7 @@ renamed = "r"
 deleted = "x"
 
 [aws]
+disabled = false
 symbol = "aws "
 
 [azure]
@@ -93,6 +99,13 @@ symbol = "jl "
 
 [kotlin]
 symbol = "kt "
+
+[kubernetes]
+disabled = false
+
+[[kubernetes.contexts]]
+context_pattern = "brandon@kubernetes"
+context_alias = "rwgps_k8s"
 
 [lua]
 symbol = "lua "

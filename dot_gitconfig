@@ -17,3 +17,5 @@
 
 [includeIf "gitdir:~/src/ridewithgps/"]
   path = ~/src/ridewithgps/.gitconfig
+[checkout]
+	defaultRemote = origin
