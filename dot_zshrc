@@ -123,7 +123,7 @@ fi
 # libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
 #
 
-. "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
+# . "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
 
 # Install global tool specified by asdf in .tool-versions
 #if command -v asdf &> /dev/null; then
@@ -144,7 +144,7 @@ else
 fi
 
 # Load nix home-manager
-. "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
+# . "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
 
 # Add GOPATH to path
 # go
