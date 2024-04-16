@@ -183,8 +183,8 @@ eval "$(${MISE_PATH}/direnv hook zsh)"
 
 # cocogitto for conventional commits https://docs.cocogitto.io/
 # TODO Figure out why mise isn't working right from .zshrc
-mkdir -p ~/.zfunc
-cog generate-completions zsh > ~/.zfunc/_cog
+# mkdir -p ~/.zfunc
+# cog generate-completions zsh > ~/.zfunc/_cog
 
 # Ansible config
 # Cow as in cowsay
