@@ -8,7 +8,9 @@ export ZSH=$HOME/.oh-my-zsh
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-ZSH_THEME="robbyrussell"
+ZSH_THEME="robbyrussell" # set by `omz`
+
+DISABLE_AUTO_UPDATE="true"
 
 # Set list of themes to pick from when loading at random
 # Setting this variable when ZSH_THEME=random will cause zsh to load
@@ -65,15 +67,55 @@ ZSH_THEME="robbyrussell"
 # Would you like to use another custom folder than $ZSH/custom?
 # ZSH_CUSTOM=/path/to/new-custom-folder
 
+# Pull latest dotfiles
+if command -v chezmoi &> /dev/null; then
+    chezmoi update
+else
+    echo "chezmoi not installed so dotfiles won't be synced"
+fi
+
+# Packaging parking lot: where things that need to be installed go (for now)
+# 
+# python-build on ubuntu variants https://github.com/pyenv/pyenv/wiki#suggested-build-environment
+#
+# sudo apt update; sudo apt install build-essential libssl-dev zlib1g-dev \
+# libbz2-dev libreadline-dev libsqlite3-dev curl \
+# libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
+#
+
+# Install global tool specified by asdf in .tool-versions
+#if command -v asdf &> /dev/null; then
+#    asdf install
+#else
+#    echo "asdf not installed"
+#fi
+
+MISE_PATH="${HOME}/.local/share/mise/shims"
+# Initialize mise and install global tool specified by .tool-versions, if available
+# Mise MUST run before oh-my-zsh otherwise plugins will not decect mise-mangaged tools
+if [[ -f .local/bin/mise ]]; then
+    eval "$(~/.local/bin/mise activate zsh)"
+    mise install
+    mise activate --shims
+    export PATH="${MISE_PATH}:${PATH}"
+else
+    echo "mise not installed"
+fi
+
 # Which plugins would you like to load?
 # Standard plugins can be found in $ZSH/plugins/
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=(git gh kubectl)
+plugins=(git gh kubectl vi-mode zsh-syntax-highlighting)
 
-source $ZSH/oh-my-zsh.sh
+if [ -f $ZSH/oh-my-zsh.sh ]; then
+    source $ZSH/oh-my-zsh.sh
+else
+    echo "$zsh/oh-my-zsh.sh not found. Shell completions and other plugins won't work."
+fi
 
+k version
 # User configuration
 
 # export MANPATH="/usr/local/man:$MANPATH"
@@ -106,42 +148,6 @@ export PATH="${HOME}/bin:${PATH}"
 # Initialize asdf-vm https://asdf-vm.com/guide/getting-started.html
 #. "${HOME}/.asdf/asdf.sh"
 
-# Pull latest dotfiles
-if command -v chezmoi &> /dev/null; then
-    echo "Updating dotfiles..."
-    chezmoi update
-else
-    echo "chezmoi not installed so dotfiles won't be synced"
-fi
-
-# Packaging parking lot: where things that need to be installed go (for now)
-# 
-# python-build on ubuntu variants https://github.com/pyenv/pyenv/wiki#suggested-build-environment
-#
-# sudo apt update; sudo apt install build-essential libssl-dev zlib1g-dev \
-# libbz2-dev libreadline-dev libsqlite3-dev curl \
-# libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
-#
-
-# . "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
-
-# Install global tool specified by asdf in .tool-versions
-#if command -v asdf &> /dev/null; then
-#    asdf install
-#else
-#    echo "asdf not installed"
-#fi
-
-MISE_PATH="${HOME}/.local/share/mise/shims"
-# Initialize mise and install global tool specified by .tool-versions, if available
-if [[ -f .local/bin/mise ]]; then
-    eval "$(~/.local/bin/mise activate zsh)"
-    mise install
-    mise activate --shims
-    export PATH="${MISE_PATH}:${PATH}"
-else
-    echo "mise not installed"
-fi
 
 # Load nix home-manager
 # . "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
@@ -160,8 +166,8 @@ if command -v nvim &> /dev/null; then
     alias vim=nvim
 fi
 
-if [[ -f "${HOME}/.work.zshrc" ]]; then
-    source "${HOME}/.work.zshrc"
+if [[ -f "${HOME}/bin/work/.work.zshrc" ]]; then
+    source "${HOME}/bin/work/.work.zshrc"
 fi
 
 # Start startup prompt
@@ -177,8 +183,8 @@ eval "$(${MISE_PATH}/direnv hook zsh)"
 
 # cocogitto for conventional commits https://docs.cocogitto.io/
 # TODO Figure out why mise isn't working right from .zshrc
-#mkdir -p ~/.zfunc
-#cog generate-completions zsh > ~/.zfunc/_cog
+mkdir -p ~/.zfunc
+cog generate-completions zsh > ~/.zfunc/_cog
 
 # Ansible config
 # Cow as in cowsay
