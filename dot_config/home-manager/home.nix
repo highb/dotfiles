@@ -21,6 +21,7 @@
     # # Adds the 'hello' command to your environment. It prints a friendly
     # # "Hello, world!" when run.
     # pkgs.hello
+    pkgs._1password
     pkgs.age
     pkgs.bat
     pkgs.cowsay
@@ -90,4 +91,7 @@
 
   # Let Home Manager install and manage itself.
   programs.home-manager.enable = true;
+
+  programs._1password-gui.enable = true;
+  programs._1password.enable = true;
 }

@@ -28,3 +28,7 @@ fi
 . "$HOME/.cargo/env"
 
 #. "$HOME/.nix-profile/etc/profile.d/hm-session-vars.sh"
+
+
+# Added by Toolbox App
+export PATH="$PATH:/home/brandon/.local/share/JetBrains/Toolbox/scripts"
