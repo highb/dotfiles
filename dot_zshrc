@@ -1,6 +1,8 @@
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
+echo "Started $HOME/.zshrc"
+
 # Path to your oh-my-zsh installation.
 export ZSH=$HOME/.oh-my-zsh
 
@@ -200,3 +202,5 @@ alias docker-compose='docker compose'
 #alias docker-compose='podman-compose'
 alias ai-rawdog='rawdog --leash'
 export PATH=$PATH:$HOME/.garden/bin
+
+echo "Completed $HOME/.zshrc" >&2
