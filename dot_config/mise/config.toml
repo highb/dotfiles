@@ -1,0 +1,4 @@
+[tools]
+chezmoi = "2.63.1"
+helm = "3.18.3"
+kubectl = "1.33.2"
