@@ -2,8 +2,37 @@
 
 Miscellaneous config files, etc that I manage using [chezmoi](https://www.chezmoi.io).
 
+## Usage
+
+### Preferred archy way
+
+```
+pamac install mise
+# Will get overwritten when we pull down the new .config/mise.toml
+mise use --global chezmoi@2.63.1
+mise install
+GITHUB_USERNAME=highb chezmoi init --apply $GITHUB_USERNAME
+# Close and re-open active term/session
+```
+
+### curly way
+
+```
+gpg --keyserver hkps://keyserver.ubuntu.com --recv-keys 0x7413A06D
+curl https://mise.jdx.dev/install.sh.sig | gpg --decrypt > install.sh
+# ensure the above is signed with the mise release key
+sh ./install.sh
+# Will get overwritten when we pull down the new .config/mise.toml
+mise use --global chezmoi@2.63.1
+mise install
+GITHUB_USERNAME=highb sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply $GITHUB_USERNAME
+# Close and re-open active term/session
+./bin/up
+```
+
 ## TODO
 
+- setup a boot.sh script to do the above steps correctly on different OS
 - add something similar to my [.bhell](https://github.com/highb/.bhell)
 scripts here that will manage installing any necessary packages using some cobbled
 together scripts that use _waves hands around_ a package manager (Nix, brew, etc.)
