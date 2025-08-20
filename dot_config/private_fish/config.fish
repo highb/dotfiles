@@ -16,6 +16,11 @@ function chezmoi_commit_push
     chezmoi git push
 end
 
+function chezmoi_todo_dotfiles
+    chezmoi_edit TODO.dotfiles
+    chezmoi_commit_push
+end
+
 mise activate fish | source
 
 set -gx EDITOR nvim
