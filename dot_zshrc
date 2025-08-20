@@ -1,3 +1,9 @@
+# My framework-free zsh config.
+#
+# Initial generation was done using:
+# $ autoload -Uz zsh-newuser-install
+# $ zsh-newuser-install -f
+
 # Use powerline
 USE_POWERLINE="true"
 # Has weird character width
@@ -5,15 +11,38 @@ USE_POWERLINE="true"
 #    is not a diamond
 HAS_WIDECHARS="false"
 # Source manjaro-zsh-configuration
-if [[ -e /usr/share/zsh/manjaro-zsh-config ]]; then
-  source /usr/share/zsh/manjaro-zsh-config
-fi
+#if [[ -e /usr/share/zsh/manjaro-zsh-config ]]; then
+#  source /usr/share/zsh/manjaro-zsh-config
+#fi
 # Use manjaro zsh prompt
-if [[ -e /usr/share/zsh/manjaro-zsh-prompt ]]; then
-  source /usr/share/zsh/manjaro-zsh-prompt
-fi
+#if [[ -e /usr/share/zsh/manjaro-zsh-prompt ]]; then
+#  source /usr/share/zsh/manjaro-zsh-prompt
+#fi
 
-
+# Tools
 eval "$(mise activate zsh)"
+
+# ENV
 export PATH="/home/brandon/bin:$PATH"
 export EDITOR="nvim"
+
+# zsh completion
+zstyle ':completion:*' completer _expand _complete _ignored
+zstyle ':completion:*' matcher-list 'm:{[:lower:][:upper:]}={[:upper:][:lower:]}'
+zstyle :compinstall filename '/home/brandon/.zshrc'
+
+autoload -Uz compinit
+compinit
+
+# zsh prompt
+autoload -Uz promptinit
+promptinit
+prompt walters
+
+# zsh other config
+HISTFILE=~/.zsh_histfile
+HISTSIZE=1000000
+SAVEHIST=1000000
+setopt autocd extendedglob nomatch
+unsetopt beep notify
+bindkey -v # Vim mode
