@@ -89,6 +89,10 @@ This repository contains a partial layout of my home directory, which is managed
 ## Usage
 This directory structure and file management helps maintain organization and consistency across my Linux systems. Each directory serves a specific purpose, facilitating efficient file management and access.
 
+## Providence/Vendoring
+
+- `.config/fish/functions/g*.fish` https://github.com/jmartindf/git-alias-pack-fish
+
 ## Contributing
 If you have suggestions for improving this directory structure or tools for management, feel free to open an issue or pull request.
 
