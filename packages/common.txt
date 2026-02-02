@@ -1,0 +1,9 @@
+# Packages to install on all platforms
+# One package per line, comments start with #
+
+# Core tools
+git
+stow
+ripgrep
+fzf
+jq

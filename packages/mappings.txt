@@ -1,0 +1,10 @@
+# Package name mappings across package managers
+# Format: generic_name:brew_name:apt_name:pacman_name
+# Use - to indicate package is not available for that manager
+# If a package has the same name everywhere, no entry needed
+
+# Example mappings (uncomment/modify as needed):
+# fd:fd:fd-find:fd
+# bat:bat:bat:bat
+# neovim:neovim:neovim:neovim
+# httpie:httpie:httpie:httpie
