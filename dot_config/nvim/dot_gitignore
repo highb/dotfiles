@@ -1,8 +1,0 @@
-tags
-test.sh
-.luarc.json
-nvim
-
-spell/
-# Disabled at recommendation of README
-# lazy-lock.json
