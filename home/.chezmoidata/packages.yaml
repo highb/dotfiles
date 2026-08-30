@@ -60,9 +60,11 @@ packages:
   # dropped from resolution on this machine.
   #
   # nix has one because metapac 0.10.1 calls
-  # `nix profile list --json --no-pretty`, and nix rejected --no-pretty until
-  # 2.26. On an older nix this probe fails and nix is skipped; on a newer one
-  # it passes and nix takes its place second in the priority list.
+  # `nix profile list --json --no-pretty`. That flag is absent from nix 2.26.2
+  # and documented by 2.28, so it landed in 2.27 or 2.28 - upgrading to 2.26
+  # is NOT enough. On a nix without it the probe fails and nix is skipped; on
+  # one with it the probe passes and nix takes its place second.
+  # See KNOWN_ISSUES.md.
   backend_probe:
     nix: nix profile list --json --no-pretty
 
@@ -80,6 +82,8 @@ packages:
     snap: snap
     uv: uv
 
+  # `mise-direct` means the tool lives in ~/.config/mise/config.toml by hand,
+  # because metapac's mise backend cannot express its name. Templates skip it.
   # Only `active` tools are installed. superseded / unmaintained / retired are
   # kept for the record and reported by `metapac unmanaged` if still present.
   tools:
@@ -131,6 +135,13 @@ packages:
       providers:
         apt: { name: build-essential }
         arch: { name: base-devel }
+
+    chezmoi:
+      status: active
+      note: "the dotfile manager itself, installed by the thing it configures"
+      providers:
+        mise: { name: chezmoi }
+        brew: { name: chezmoi }
 
     code:
       status: active
@@ -300,6 +311,17 @@ packages:
         apt: { name: magic-wormhole, binary: wormhole }
         brew: { name: magic-wormhole }
 
+    markdownlint-cli:
+      status: mise-direct
+      note: >
+        metapac's mise backend validates names against `mise search`, which lists
+        only registry tools - a `npm:` or `github:` name fails validation and
+        aborts the whole run, every backend with it. So this one is declared
+        directly in ~/.config/mise/config.toml and metapac never sees it.
+        `metapac unmanaged` will report it; that is correct, not a defect.
+      providers:
+        mise: { name: "npm:markdownlint-cli", binary: markdownlint }
+
     minikube:
       status: retired
       superseded_by: k3d
@@ -312,6 +334,23 @@ packages:
         mise: { name: navi }
         brew: { name: navi }
 
+    node:
+      status: active
+      note: "runtime, and what mise's npm: backend installs into"
+      providers:
+        mise: { name: node }
+
+    oh-my-pi:
+      status: mise-direct
+      note: >
+        metapac's mise backend validates names against `mise search`, which lists
+        only registry tools - a `npm:` or `github:` name fails validation and
+        aborts the whole run, every backend with it. So this one is declared
+        directly in ~/.config/mise/config.toml and metapac never sees it.
+        `metapac unmanaged` will report it; that is correct, not a defect.
+      providers:
+        mise: { name: "github:can1357/oh-my-pi", binary: omp }
+
     oh-my-zsh:
       status: retired
       note: "still on disk at ~/.oh-my-zsh, sourced by nothing"
@@ -322,6 +361,17 @@ packages:
       providers:
         apt: { name: procps, binary: ps }
         arch: { name: procps-ng }
+
+    prettier:
+      status: mise-direct
+      note: >
+        metapac's mise backend validates names against `mise search`, which lists
+        only registry tools - a `npm:` or `github:` name fails validation and
+        aborts the whole run, every backend with it. So this one is declared
+        directly in ~/.config/mise/config.toml and metapac never sees it.
+        `metapac unmanaged` will report it; that is correct, not a defect.
+      providers:
+        mise: { name: "npm:prettier" }
 
     pwgen:
       status: active
@@ -337,6 +387,17 @@ packages:
         brew: { name: ripgrep }
         mise: { name: ripgrep, binary: rg }
         snap: { name: ripgrep, options: { confinement: classic } }
+
+    ruby:
+      status: active
+      providers:
+        mise: { name: ruby }
+
+    rust:
+      status: active
+      note: "mise's rust plugin wraps rustup; the cargo backend needs the cargo it provides"
+      providers:
+        mise: { name: rust, binary: rustc }
 
     skaffold:
       status: retired

@@ -119,6 +119,9 @@ metapac sync                                       execution
   confirm at; `METAPAC_AUTOSYNC=1` opts into unattended installs.
 - `docs/provisioning-gap.md` — why this shape.
 
+- `KNOWN_ISSUES.md` — upstream bugs, tool limitations, and the gotchas that
+  will catch you. Read it before debugging something that looks impossible.
+
 Remaining gaps, and what is left of the tool that was going to be written, are
 in `TODO.md` in [.bhell](https://github.com/highb/.bhell).
 
