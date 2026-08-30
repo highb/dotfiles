@@ -90,11 +90,28 @@ network; `chezmoi update` is now something you run deliberately.
   [kickstart.nvim](https://github.com/nvim-lua/kickstart.nvim) and since
   diverged. Fully owned here, not tracked upstream.
 
+## Provisioning
+
+chezmoi manages file content. It has no package model, so everything a config
+file depends on being installed is handled elsewhere - currently by nothing,
+which is why several tools `shell.yaml` activates are not actually installed.
+
+- `packages/packages.yaml` — declarative inventory: 45 tools with per-platform
+  names, an owning provider and a status, plus fonts and bootstrap installers.
+  Extracted from [.bhell](https://github.com/highb/.bhell).
+- `docs/provisioning-gap.md` — what this repo works around because chezmoi
+  stops at file content, written as the requirements for the tool that will
+  eventually consume `packages.yaml`.
+
+Nothing reads `packages.yaml` yet. The intended consumer is a Rust rewrite of
+`.bhell`; see the TODO in that repository.
+
 ## TODO
 
-- A `boot.sh` that handles package installation per OS, absorbing the useful
-  parts of [.bhell](https://github.com/highb/.bhell)
+- Build the provisioning tool described in `docs/provisioning-gap.md`
+- Install the tools `shell.yaml` assumes: `fd`, `bat`, `eza`, `zoxide`, `atuin`
+- Decide which of mise, apt, nix and curl-to-bash owns each binary, and remove
+  the others
 - Manage application colour schemes coherently
 - Secrets via a real backend rather than by leaving them out
-- Package management: `fzf`, `fd`, `bat`, `eza`, `zoxide`, `direnv` are all
-  assumed by `shell.yaml` but nothing installs them yet
+- Move `.tmux.conf.local` and the flavours config out of `.bhell` and into here
