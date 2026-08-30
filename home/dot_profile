@@ -1,0 +1,12 @@
+# ~/.profile - POSIX login shells.
+#
+# Environment only. Interactive settings belong in ~/.bashrc or ~/.zshrc,
+# which source the same ~/.config/shell/env.sh this does.
+
+: "${XDG_CONFIG_HOME:=$HOME/.config}"
+[ -r "${XDG_CONFIG_HOME}/shell/env.sh" ] && . "${XDG_CONFIG_HOME}/shell/env.sh"
+
+# A bash login shell reads this file instead of ~/.bashrc, not as well as it.
+if [ -n "${BASH_VERSION-}" ] && [ -r "${HOME}/.bashrc" ]; then
+    . "${HOME}/.bashrc"
+fi

@@ -1,0 +1,7 @@
+# ~/.zshenv - read by every zsh, including non-interactive ones.
+#
+# Environment only, so that scripts and `zsh -c` see the same PATH an
+# interactive shell does.
+
+: "${XDG_CONFIG_HOME:=$HOME/.config}"
+[ -r "${XDG_CONFIG_HOME}/shell/env.sh" ] && . "${XDG_CONFIG_HOME}/shell/env.sh"

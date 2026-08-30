@@ -1,0 +1,20 @@
+# ~/.zshrc - interactive zsh.
+#
+# Almost nothing lives here. Shared, shell-agnostic configuration is in
+# ~/.config/shell/; this file only names the zsh-specific fragment and fixes
+# the order everything loads in. ~/.bashrc is the same file with one word
+# changed, which is the entire point.
+
+[[ -o interactive ]] || return
+
+: "${XDG_CONFIG_HOME:=$HOME/.config}"
+__shell_dir="${XDG_CONFIG_HOME}/shell"
+
+#          shared      shell-specific   shared
+for __f in env         zsh              aliases functions interactive tools; do
+    [ -r "${__shell_dir}/${__f}.sh" ] && . "${__shell_dir}/${__f}.sh"
+done
+unset __f __shell_dir
+
+# Machine-local overrides, never committed.
+[ -r "${HOME}/.zshrc.local" ] && . "${HOME}/.zshrc.local"

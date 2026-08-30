@@ -1,0 +1,61 @@
+# Single source of truth for shell configuration.
+#
+# Everything here is rendered into ~/.config/shell/*.sh by the templates in
+# dot_config/shell/. Adding a shell means adding one template that reads this
+# same data - see dot_config/shell/README.md.
+
+shell:
+  # Prepended to PATH in this order, so the first entry wins. Directories that
+  # do not exist are skipped, and re-sourcing never duplicates an entry.
+  path:
+    - $HOME/bin
+    - $HOME/.local/bin
+    - $HOME/.cargo/bin
+    - $HOME/.local/share/JetBrains/Toolbox/scripts
+
+  # Exported in every shell, login or interactive. Values are emitted verbatim
+  # inside double quotes, so keep them literal - anything that needs to run a
+  # command belongs in functions.sh.
+  env:
+    EDITOR: nvim
+    VISUAL: nvim
+    PAGER: less
+    LESS: "-R"
+    MANPAGER: "less -R"
+    XDG_CONFIG_HOME: $HOME/.config
+    XDG_CACHE_HOME: $HOME/.cache
+    XDG_DATA_HOME: $HOME/.local/share
+    XDG_STATE_HOME: $HOME/.local/state
+
+  # Interactive aliases. Values must not contain single quotes; anything that
+  # complicated is a function, not an alias.
+  aliases:
+    ls: ls --color=auto
+    ll: ls -alF
+    la: ls -A
+    l: ls -CF
+    grep: grep --color=auto
+    egrep: grep -E --color=auto
+    fgrep: grep -F --color=auto
+    docker-compose: docker compose
+    # I struggle to remember the name Chezmoi for some reason.
+    dotfile: chezmoi
+    cm: chezmoi
+    cme: chezmoi edit --apply
+
+  # Tools that print shell-specific startup code. Each runs only if the binary
+  # is on PATH; %s is replaced with the name of the running shell. Order
+  # matters - mise first so it can put later tools on PATH, prompt last.
+  init:
+    - cmd: mise
+      args: activate %s
+    - cmd: direnv
+      args: hook %s
+    - cmd: zoxide
+      args: init %s
+    - cmd: fzf
+      args: --%s
+    - cmd: atuin
+      args: init %s
+    - cmd: starship
+      args: init %s

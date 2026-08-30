@@ -1,0 +1,23 @@
+# ~/.bashrc - interactive bash.
+#
+# Almost nothing lives here. Shared, shell-agnostic configuration is in
+# ~/.config/shell/; this file only names the bash-specific fragment and fixes
+# the order everything loads in. ~/.zshrc is the same file with one word
+# changed, which is the entire point.
+
+case $- in
+    *i*) ;;
+      *) return ;;
+esac
+
+: "${XDG_CONFIG_HOME:=$HOME/.config}"
+__shell_dir="${XDG_CONFIG_HOME}/shell"
+
+#          shared      shell-specific   shared
+for __f in env         bash             aliases functions interactive tools; do
+    [ -r "${__shell_dir}/${__f}.sh" ] && . "${__shell_dir}/${__f}.sh"
+done
+unset __f __shell_dir
+
+# Machine-local overrides, never committed.
+[ -r "${HOME}/.bashrc.local" ] && . "${HOME}/.bashrc.local"
