@@ -1,0 +1,11 @@
+{{- /* Resolve this machine to a key in packages.provider_priority.
+       Shared by the metapac config and group templates so the two can never
+       disagree about which platform they are generating for. */ -}}
+{{- if eq .chezmoi.os "linux" -}}
+{{-   $id := printf "linux-%s" .chezmoi.osRelease.id -}}
+{{-   $like := printf "linux-%s" (.chezmoi.osRelease.idLike | default "none") -}}
+{{-   if hasKey .packages.provider_priority $id -}}{{ $id }}
+{{-   else if hasKey .packages.provider_priority $like -}}{{ $like }}
+{{-   else -}}default{{- end -}}
+{{- else if hasKey .packages.provider_priority .chezmoi.os -}}{{ .chezmoi.os }}
+{{- else -}}default{{- end -}}

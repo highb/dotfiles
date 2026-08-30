@@ -1,0 +1,10 @@
+{{- /* Backends usable on this machine: in this platform's priority order, and
+       actually present. Emitted space-separated for `splitList " "`.
+       Shared by the config and group templates. */ -}}
+{{- $platform := includeTemplate "metapac-platform" . -}}
+{{- $out := list -}}
+{{- range $b := index .packages.provider_priority $platform -}}
+{{-   $bin := get $.packages.backend_binaries $b -}}
+{{-   if and $bin (lookPath $bin) -}}{{- $out = append $out $b -}}{{- end -}}
+{{- end -}}
+{{ $out | join " " }}

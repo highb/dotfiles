@@ -1,0 +1,35 @@
+#!/bin/sh
+# Refresh installed packages when the inventory changes.
+#
+# chezmoi re-runs a run_onchange_ script when its rendered contents change.
+# The hash below is what couples the two: edit .chezmoidata/packages.yaml, and
+# the next `chezmoi apply` runs this. It is taken over the parsed data, so
+# reformatting and comment-only edits do not trigger a resync.
+#
+# inventory sha256: {{ .packages | toJson | sha256sum }}
+#
+# `metapac sync` has no dry-run and installs system packages, some of them
+# under sudo. It is therefore NOT run unattended: with a terminal it prompts,
+# and without one it reports and exits 0 rather than installing things behind
+# your back during a `chezmoi apply` on a new machine. Set METAPAC_AUTOSYNC=1
+# to opt into unattended installs.
+
+set -eu
+
+if ! command -v metapac >/dev/null 2>&1; then
+    echo "metapac not installed; skipping package sync" >&2
+    echo "  cargo install metapac --locked" >&2
+    exit 0
+fi
+
+if [ "${METAPAC_AUTOSYNC:-0}" = "1" ]; then
+    exec metapac sync --no-confirm
+fi
+
+if [ -t 0 ] && [ -t 1 ]; then
+    exec metapac sync
+fi
+
+echo "Package inventory changed. Review and apply with:" >&2
+echo "  metapac sync" >&2
+exit 0

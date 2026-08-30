@@ -1,171 +1,397 @@
 # Machine inventory: everything a working machine needs that is not a dotfile.
 #
-# Extracted 2026-08-30 from highb/.bhell, which installed this set with a
-# handful of bash scripts and one flat list per platform per package manager.
+# Single logical source of truth. Each tool is declared once, with the name it
+# goes by in each package manager underneath. chezmoi resolves this per machine
+# and renders metapac group files from it; metapac does the installing.
 #
-# Nothing consumes this file yet. It is the input format for the provisioning
-# tool described in ../docs/provisioning-gap.md, kept declarative so that the
-# tool can be written against data that already exists rather than the data
-# being invented to fit the tool.
+#   packages.yaml  ->  chezmoi template  ->  ~/.config/metapac/  ->  metapac sync
+#   (this file)        (resolution)          (generated)            (execution)
+#
+# So edit this file and nothing else. ~/.config/metapac/ is generated output and
+# any change there is overwritten on the next `chezmoi apply`.
+#
+# Backend ids are metapac's own, which is why the Arch backend is `arch` and not
+# `pacman`. See https://github.com/ripytide/metapac.
+#
+# Extracted 2026-08-30 from highb/.bhell.
 #
 # Entries are never silently deleted. A tool that is no longer wanted keeps its
 # entry and gains a `status`, so the record of what was once installed and why
 # it stopped being installed lives here rather than in a commit nobody reads.
+
 packages:
   meta:
+    schema: 2
     extracted_from: highb/.bhell
     extracted_on: 2026-08-30
-    consumed_by: nothing yet
+    executor: metapac
 
-  # `provider` says who owns installing a tool, and is the field that matters
-  # most. This machine currently has four overlapping package sources - mise,
-  # apt/snap, nix, and curl-to-bash installers - and tools installed by more than
-  # one of them is the single biggest source of confusion. See the gap doc.
+  # Which backend wins, most preferred first. This is the layer metapac does
+  # not have: it treats every enabled backend independently, so without this a
+  # tool listed under both apt and brew gets installed twice.
   #
-  #   mise    declared in home/dot_config/mise/config.toml, already working
-  #   system  the platform package manager: apt, brew, snap, pacman
-  #   manual  an upstream installer script or a release download
+  # The first backend in the list that (a) is in this platform's list and
+  # (b) has an entry for the tool wins. A tool's `prefer` is tried ahead of it.
   #
-  # status:
-  #   active       wanted, current
-  #   superseded   replaced by something else, see superseded_by
-  #   unmaintained upstream is dead
-  #   retired      deliberately dropped, kept for the record
+  # Rationale: mise first because it is cross-platform, unprivileged, and the
+  # only backend that pins versions properly. The native system manager next,
+  # because it is the one that gets security updates. snap late, as it most
+  # often duplicates something already installed.
+  #
+  # nix is deliberately absent. No tool here has a nix entry, so it added no
+  # coverage - and metapac 0.10.1's nix backend runs
+  # `nix profile list --json --no-pretty`, a flag this machine's nix 2.25.3
+  # rejects. metapac aborts the whole command when any one backend errors, so
+  # enabling nix broke `metapac unmanaged` entirely. Re-add it only alongside
+  # a nix newer than the flag, and only if something actually installs by nix.
+  provider_priority:
+    default:      [mise, brew, apt, dnf, arch, snap, cargo]
+    linux-ubuntu: [mise, apt, snap, brew, cargo]
+    linux-debian: [mise, apt, brew, cargo]
+    linux-arch:   [mise, arch, cargo]
+    linux-fedora: [mise, dnf, cargo]
+    darwin:       [mise, brew, cargo]
 
+  # How to tell whether a backend actually exists on this machine. Resolution
+  # skips a backend whose binary is absent, so a tool falls through to the next
+  # one in the priority list rather than being assigned to a package manager
+  # that is not installed. metapac has no equivalent: its enabled_backends is
+  # static, so it would happily be told to install a brew package on a machine
+  # with no brew.
+  backend_binaries:
+    apt: apt-get
+    arch: pacman
+    brew: brew
+    cargo: cargo
+    dnf: dnf
+    flatpak: flatpak
+    mise: mise
+    nix: nix
+    snap: snap
+
+  # Only `active` tools are installed. superseded / unmaintained / retired are
+  # kept for the record and reported by `metapac unmanaged` if still present.
   tools:
+    1password:
+      status: active
+      note: "also the ssh commit signer: .gitconfig points at /opt/1Password/op-ssh-sign"
+      providers:
+        snap: { name: 1password }
 
-    # --- Base system ---------------------------------------------------------
-    build-essential:  { provider: system, apt: build-essential, pacman: base-devel, brew: null, status: active }
-    curl:             { provider: system, apt: curl, brew: curl, pacman: curl, status: active }
-    file:             { provider: system, apt: file, brew: file, pacman: file, status: active }
-    git:              { provider: system, apt: git, brew: git, pacman: git, status: active }
-    procps:           { provider: system, apt: procps, pacman: procps-ng, status: active }
-    vim:              { provider: system, apt: vim, brew: vim, pacman: vim, status: active }
+    age:
+      status: active
+      providers:
+        apt: { name: age }
+        brew: { name: age }
 
-    # --- Shell tooling that .config/shell assumes ----------------------------
-    # shell.yaml activates each of these if present and skips it if not, so a
-    # missing one degrades quietly rather than breaking a terminal. That is also
-    # why their absence has gone unnoticed: several are not installed here.
-    fzf:              { provider: mise, apt: fzf, brew: fzf, status: active }
-    direnv:           { provider: mise, apt: direnv, brew: direnv, status: active }
-    ripgrep:          { provider: mise, apt: ripgrep, brew: ripgrep, snap: "ripgrep --classic", status: active }
-    starship:         { provider: manual, brew: starship, snap: starship, status: active,
-                        note: "installed to /usr/local/bin by the upstream install script; not owned by any package manager on this machine" }
-    bat:              { provider: system, apt: bat, brew: bat, status: active,
-                        note: "apt installs the binary as batcat on Debian and Ubuntu" }
-    fd:               { provider: system, apt: fd-find, brew: fd, status: active,
-                        note: "apt installs the binary as fdfind on Debian and Ubuntu" }
-    zoxide:           { provider: system, apt: zoxide, brew: zoxide, status: active }
-    atuin:            { provider: manual, brew: atuin, status: active,
-                        note: "referenced by shell.yaml, never installed here" }
-    eza:              { provider: system, apt: eza, brew: eza, status: active,
-                        note: "the maintained fork of exa" }
+    asdf:
+      status: superseded
+      superseded_by: mise
+      note: "mise reads .tool-versions and is what this machine uses now"
+      providers:
+        brew: { name: asdf }
 
-    # --- Development ---------------------------------------------------------
-    gh:               { provider: system, apt: gh, brew: gh, status: active }
-    jq:               { provider: system, apt: jq, brew: jq, status: active }
-    yq:               { provider: system, brew: yq, status: active }
-    age:              { provider: system, apt: age, brew: age, status: active }
-    httpie:           { provider: system, apt: httpie, brew: httpie, status: active,
-                        note: "overlaps xh, which mise already installs and which is the faster reimplementation" }
-    xh:               { provider: mise, brew: xh, status: active }
-    navi:             { provider: system, brew: navi, status: active }
-    pwgen:            { provider: system, apt: pwgen, brew: pwgen, status: active }
-    magic-wormhole:   { provider: system, apt: magic-wormhole, brew: magic-wormhole, status: active }
-    zola:             { provider: system, snap: zola, brew: zola, status: active }
-    hugo:             { provider: mise, status: active }
+    atuin:
+      status: active
+      note: "referenced by shell.yaml, never installed here"
+      providers:
+        brew: { name: atuin }
 
-    # --- Kubernetes and cloud ------------------------------------------------
-    kubectl:          { provider: mise, brew: kubernetes-cli, status: active,
-                        note: "listed as kubernetes-cli in .bhell" }
-    kubie:            { provider: mise, brew: kubie, status: active }
-    helm:             { provider: mise, brew: helm, status: active }
-    k3d:              { provider: mise, brew: k3d, status: active }
-    awscli:           { provider: mise, brew: awscli, snap: "aws-cli --classic", status: active }
-    google-cloud-cli: { provider: system, snap: "google-cloud-cli --classic", status: active,
-                        note: "installed by curl-to-bash on darwin in .bhell" }
-    kustomize:        { provider: system, brew: kustomize, status: active }
-    minikube:         { provider: system, brew: minikube, status: retired,
-                        superseded_by: k3d }
-    skaffold:         { provider: system, brew: skaffold, status: retired,
-                        note: "from a job that used it; nothing here does now" }
+    awscli:
+      status: active
+      prefer: [mise]
+      providers:
+        brew: { name: awscli }
+        mise: { name: awscli }
+        snap: { name: aws-cli, options: { confinement: classic } }
 
-    # --- Desktop applications ------------------------------------------------
-    # GUI applications, separated because a headless or server machine wants the
-    # list above and none of this one.
-    1password:        { provider: system, snap: 1password, status: active,
-                        note: "also the ssh commit signer: .gitconfig points at /opt/1Password/op-ssh-sign" }
-    code:             { provider: system, snap: code, status: active }
-    slack:            { provider: system, snap: slack, status: active }
-    discord:          { provider: system, snap: discord, status: active }
-    exercism:         { provider: system, snap: exercism, brew: exercism, status: active }
-    ghostty:          { provider: system, snap: ghostty, status: active,
-                        note: "config is managed: home/dot_config/ghostty/config" }
+    bat:
+      status: active
+      note: "apt installs the binary as batcat on Debian and Ubuntu"
+      providers:
+        apt: { name: bat }
+        brew: { name: bat }
 
-    # --- Superseded ----------------------------------------------------------
-    exa:              { provider: system, brew: exa, status: unmaintained,
-                        superseded_by: eza,
-                        note: "archived upstream in 2023" }
-    asdf:             { provider: system, brew: asdf, status: superseded,
-                        superseded_by: mise,
-                        note: "mise reads .tool-versions and is what this machine uses now" }
-    zplug:            { provider: manual, status: retired,
-                        note: "zsh plugin manager; .zshrc has been framework-free since 851d536" }
-    oh-my-zsh:        { provider: manual, status: retired,
-                        note: "still on disk at ~/.oh-my-zsh, sourced by nothing" }
+    build-essential:
+      status: active
+      providers:
+        apt: { name: build-essential }
+        arch: { name: base-devel }
 
+    code:
+      status: active
+      providers:
+        snap: { name: code }
+
+    curl:
+      status: active
+      providers:
+        apt: { name: curl }
+        arch: { name: curl }
+        brew: { name: curl }
+
+    direnv:
+      status: active
+      prefer: [mise]
+      providers:
+        apt: { name: direnv }
+        brew: { name: direnv }
+        mise: { name: direnv }
+
+    discord:
+      status: active
+      providers:
+        snap: { name: discord }
+
+    exa:
+      status: unmaintained
+      superseded_by: eza
+      note: "archived upstream in 2023"
+      providers:
+        brew: { name: exa }
+
+    exercism:
+      status: active
+      providers:
+        brew: { name: exercism }
+        snap: { name: exercism }
+
+    eza:
+      status: active
+      note: "the maintained fork of exa"
+      providers:
+        apt: { name: eza }
+        brew: { name: eza }
+
+    fd:
+      status: active
+      note: "apt installs the binary as fdfind on Debian and Ubuntu"
+      providers:
+        apt: { name: fd-find }
+        brew: { name: fd }
+
+    file:
+      status: active
+      providers:
+        apt: { name: file }
+        arch: { name: file }
+        brew: { name: file }
+
+    fzf:
+      status: active
+      prefer: [mise]
+      providers:
+        apt: { name: fzf }
+        brew: { name: fzf }
+        mise: { name: fzf }
+
+    gh:
+      status: active
+      providers:
+        apt: { name: gh }
+        brew: { name: gh }
+
+    ghostty:
+      status: active
+      note: "config is managed: home/dot_config/ghostty/config"
+      providers:
+        snap: { name: ghostty }
+
+    git:
+      status: active
+      providers:
+        apt: { name: git }
+        arch: { name: git }
+        brew: { name: git }
+
+    google-cloud-cli:
+      status: active
+      note: "installed by curl-to-bash on darwin in .bhell"
+      providers:
+        snap: { name: google-cloud-cli, options: { confinement: classic } }
+
+    helm:
+      status: active
+      prefer: [mise]
+      providers:
+        brew: { name: helm }
+        mise: { name: helm }
+
+    httpie:
+      status: active
+      note: "overlaps xh, which mise already installs and which is the faster reimplementation"
+      providers:
+        apt: { name: httpie }
+        brew: { name: httpie }
+
+    hugo:
+      status: active
+      prefer: [mise]
+      providers:
+        mise: { name: hugo, options: { version: 0.155.1 } }
+
+    jq:
+      status: active
+      providers:
+        apt: { name: jq }
+        brew: { name: jq }
+
+    k3d:
+      status: active
+      prefer: [mise]
+      providers:
+        brew: { name: k3d }
+        mise: { name: k3d }
+
+    kubectl:
+      status: active
+      prefer: [mise]
+      note: "listed as kubernetes-cli in .bhell"
+      providers:
+        brew: { name: kubernetes-cli }
+        mise: { name: kubectl }
+
+    kubie:
+      status: active
+      prefer: [mise]
+      providers:
+        brew: { name: kubie }
+        mise: { name: kubie }
+
+    kustomize:
+      status: active
+      providers:
+        brew: { name: kustomize }
+
+    magic-wormhole:
+      status: active
+      providers:
+        apt: { name: magic-wormhole }
+        brew: { name: magic-wormhole }
+
+    minikube:
+      status: retired
+      superseded_by: k3d
+      providers:
+        brew: { name: minikube }
+
+    navi:
+      status: active
+      providers:
+        brew: { name: navi }
+
+    oh-my-zsh:
+      status: retired
+      note: "still on disk at ~/.oh-my-zsh, sourced by nothing"
+      providers: {}
+
+    procps:
+      status: active
+      providers:
+        apt: { name: procps }
+        arch: { name: procps-ng }
+
+    pwgen:
+      status: active
+      providers:
+        apt: { name: pwgen }
+        brew: { name: pwgen }
+
+    ripgrep:
+      status: active
+      prefer: [mise]
+      providers:
+        apt: { name: ripgrep }
+        brew: { name: ripgrep }
+        mise: { name: ripgrep }
+        snap: { name: ripgrep, options: { confinement: classic } }
+
+    skaffold:
+      status: retired
+      note: "from a job that used it; nothing here does now"
+      providers:
+        brew: { name: skaffold }
+
+    slack:
+      status: active
+      providers:
+        snap: { name: slack }
+
+    starship:
+      status: active
+      note: "installed to /usr/local/bin by the upstream install script; not owned by any package manager on this machine"
+      providers:
+        brew: { name: starship }
+        snap: { name: starship }
+
+    vim:
+      status: active
+      providers:
+        apt: { name: vim }
+        arch: { name: vim }
+        brew: { name: vim }
+
+    xh:
+      status: active
+      prefer: [mise]
+      providers:
+        brew: { name: xh }
+        mise: { name: xh }
+
+    yq:
+      status: active
+      providers:
+        brew: { name: yq }
+
+    zola:
+      status: active
+      providers:
+        brew: { name: zola }
+        snap: { name: zola }
+
+    zoxide:
+      status: active
+      providers:
+        apt: { name: zoxide }
+        brew: { name: zoxide }
+
+    zplug:
+      status: retired
+      note: "zsh plugin manager; .zshrc has been framework-free since 851d536"
+      providers: {}
   fonts:
-    # .bhell vendored 16 TTFs and copied them into ~/.fonts. Declared here
-    # instead: a provisioning tool should fetch a pinned release, not carry
-    # 1.9MB of binaries in a config repo.
     - name: Source Code Pro
       upstream: https://github.com/adobe-fonts/source-code-pro
       license: OFL-1.1
       install: { linux: "~/.local/share/fonts", darwin: "brew --cask font-source-code-pro" }
       status: active
       note: >
-        .bhell installed to ~/.fonts, which is the legacy path; ~/.local/share/fonts
-        is the XDG location and is what fontconfig prefers now.
+        .bhell installed to ~/.fonts, the legacy path; ~/.local/share/fonts is
+        the XDG location fontconfig prefers. metapac has no font backend, so
+        this is still unhandled - see the gaps list in .bhell/TODO.md.
     - name: Nerd Font patched variant
       status: todo
       note: >
-        Not in .bhell, but starship's default preset and the powerline glyphs the
-        old zsh config assumed both need one. Worth resolving when the tool exists.
+        Needed by starship's default preset and the powerline glyphs the old
+        zsh config assumed. On macOS this is a brew cask; on Linux it is a
+        download, which is the gap.
 
+  # Upstream installer scripts. metapac has no backend for these.
   bootstrap:
-    # Upstream installer scripts. Each is an unpinned curl-to-bash or a git clone
-    # that .bhell re-ran on every setup, which is why setup was not idempotent in
-    # any useful sense.
-    - name: homebrew
-      method: curl-to-bash
-      url: https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
-      platforms: [darwin, linux]
-      status: retired
-      note: "linuxbrew was installed under sudo, which homebrew explicitly warns against"
-    - name: oh-my-zsh
-      method: curl-to-bash
-      status: retired
-    - name: zplug
-      method: curl-to-bash
-      status: retired
-    - name: amix/vimrc
-      method: git-clone
-      url: https://github.com/amix/vimrc
-      status: retired
-      superseded_by: "home/dot_config/nvim"
-    - name: gpakosz/.tmux
-      method: git-clone
-      url: https://github.com/gpakosz/.tmux
-      status: active
-      note: ".bhell also kept a .tmux.conf.local override; not currently managed here"
-    - name: mise
-      method: curl-to-bash
-      url: https://mise.run
-      platforms: [darwin, linux]
-      status: active
-      note: "the one bootstrap that still matters; everything else can come from it"
+    - { name: mise, method: curl-to-bash, url: "https://mise.run", status: active,
+        note: "the one bootstrap that still matters; everything else comes from it" }
+    - { name: metapac, method: cargo, status: active,
+        note: "cargo install metapac --locked; chicken-and-egg with the cargo backend" }
+    - { name: homebrew, method: curl-to-bash, status: retired,
+        note: "linuxbrew was installed under sudo, which homebrew warns against" }
+    - { name: oh-my-zsh, method: curl-to-bash, status: retired }
+    - { name: zplug, method: curl-to-bash, status: retired }
+    - { name: amix/vimrc, method: git-clone, status: retired, superseded_by: "home/dot_config/nvim" }
+    - { name: gpakosz/.tmux, method: git-clone, status: active,
+        note: "not currently managed here" }
 
-  # Homebrew taps are dropped. Both tap files in .bhell were corrupt - one
-  # contained the literal string `nnn`, the other `homebrew/cask-fontsnnn` - so
-  # the tap loop had been silently tapping nothing, or failing, for years.
-  taps: []
+  # Both tap files in .bhell were corrupt - one held the literal string `nnn`,
+  # the other `homebrew/cask-fontsnnn` - so the tap loop had been failing or
+  # tapping nothing for years. metapac supports these as `repos` per backend
+  # when something actually needs one.
+  repos: {}
