@@ -4,8 +4,10 @@ What this repository does by hand because chezmoi does not do it, written down
 so that the tool eventually built to fill the gap is built against real
 requirements rather than remembered ones.
 
-Companion to `packages/packages.yaml`, which is the data half of the same
-problem, and to the TODO in `~/src/github/highb/.bhell`.
+Companion to `home/.chezmoidata/packages.yaml`, which is the data half of the
+same problem, and to `~/src/github/highb/.bhell/TODO.md`, which is the
+implementation spec built on top of both. This document is the *why*; that one
+is the *how*. Read this first.
 
 ## What chezmoi is good at, and where it stops
 

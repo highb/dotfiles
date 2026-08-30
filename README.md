@@ -96,15 +96,17 @@ chezmoi manages file content. It has no package model, so everything a config
 file depends on being installed is handled elsewhere - currently by nothing,
 which is why several tools `shell.yaml` activates are not actually installed.
 
-- `packages/packages.yaml` — declarative inventory: 45 tools with per-platform
+- `home/.chezmoidata/packages.yaml` — declarative inventory: 45 tools with per-platform
   names, an owning provider and a status, plus fonts and bootstrap installers.
   Extracted from [.bhell](https://github.com/highb/.bhell).
 - `docs/provisioning-gap.md` — what this repo works around because chezmoi
   stops at file content, written as the requirements for the tool that will
   eventually consume `packages.yaml`.
 
-Nothing reads `packages.yaml` yet. The intended consumer is a Rust rewrite of
-`.bhell`; see the TODO in that repository.
+`home/run_onchange_after_20-bhell-sync.sh.tmpl` embeds a hash of the inventory
+and runs `bhell apply` when it changes. It exits 0 while `bhell` is absent, so
+it is inert until the tool exists. The implementation spec for that tool is
+`TODO.md` in [.bhell](https://github.com/highb/.bhell).
 
 ## TODO
 
