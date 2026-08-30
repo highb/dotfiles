@@ -92,28 +92,43 @@ network; `chezmoi update` is now something you run deliberately.
 
 ## Provisioning
 
-chezmoi manages file content. It has no package model, so everything a config
-file depends on being installed is handled elsewhere - currently by nothing,
-which is why several tools `shell.yaml` activates are not actually installed.
+chezmoi manages file content; it has no package model. Packages are handled by
+[metapac](https://github.com/ripytide/metapac), with chezmoi supplying the one
+thing metapac lacks — resolving a single logical inventory to one backend per
+tool, per machine.
 
-- `home/.chezmoidata/packages.yaml` — declarative inventory: 45 tools with per-platform
-  names, an owning provider and a status, plus fonts and bootstrap installers.
-  Extracted from [.bhell](https://github.com/highb/.bhell).
-- `docs/provisioning-gap.md` — what this repo works around because chezmoi
-  stops at file content, written as the requirements for the tool that will
-  eventually consume `packages.yaml`.
+```
+home/.chezmoidata/packages.yaml   single source of truth: 45 tools
+        |
+        |  chezmoi template: prefer ++ platform priority, skipping
+        |  backends this machine does not have (lookPath)
+        v
+~/.config/metapac/{config,groups/dotfiles}.toml    generated - do not edit
+        |
+        v
+metapac sync                                       execution
+```
 
-`home/run_onchange_after_20-bhell-sync.sh.tmpl` embeds a hash of the inventory
-and runs `bhell apply` when it changes. It exits 0 while `bhell` is absent, so
-it is inert until the tool exists. The implementation spec for that tool is
-`TODO.md` in [.bhell](https://github.com/highb/.bhell).
+- `home/.chezmoidata/packages.yaml` — every tool declared once, with the name
+  it goes by in each backend. Backend ids are metapac's own, so Arch is `arch`.
+- `home/dot_config/metapac/**.tmpl` — the resolution layer.
+- `home/.chezmoitemplates/metapac-{platform,backends}` — shared partials, so
+  the config and group templates cannot disagree about the platform.
+- `home/run_onchange_after_20-metapac-sync.sh.tmpl` — hashes the parsed
+  inventory and runs `metapac sync` when it changes. Only with a terminal to
+  confirm at; `METAPAC_AUTOSYNC=1` opts into unattended installs.
+- `docs/provisioning-gap.md` — why this shape.
+
+Remaining gaps, and what is left of the tool that was going to be written, are
+in `TODO.md` in [.bhell](https://github.com/highb/.bhell).
 
 ## TODO
 
-- Build the provisioning tool described in `docs/provisioning-gap.md`
-- Install the tools `shell.yaml` assumes: `fd`, `bat`, `eza`, `zoxide`, `atuin`
-- Decide which of mise, apt, nix and curl-to-bash owns each binary, and remove
-  the others
+- `metapac sync` to install the tools `shell.yaml` assumes: `fd`, `bat`, `eza`,
+  `zoxide` (`atuin` is still unresolvable — brew only, and there is no brew here)
+- Resolve two live duplicate installs: `ripgrep` (mise + apt) and `1password`
+  (snap + apt)
+- Fill in `arch:` and `dnf:` names, when a machine of either kind exists
 - Manage application colour schemes coherently
 - Secrets via a real backend rather than by leaving them out
 - Move `.tmux.conf.local` and the flavours config out of `.bhell` and into here

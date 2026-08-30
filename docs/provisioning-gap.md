@@ -4,10 +4,16 @@ What this repository does by hand because chezmoi does not do it, written down
 so that the tool eventually built to fill the gap is built against real
 requirements rather than remembered ones.
 
-Companion to `home/.chezmoidata/packages.yaml`, which is the data half of the
-same problem, and to `~/src/github/highb/.bhell/TODO.md`, which is the
-implementation spec built on top of both. This document is the *why*; that one
-is the *how*. Read this first.
+Companion to `home/.chezmoidata/packages.yaml`, the data half of the same
+problem, and to `~/src/github/highb/.bhell/TODO.md`, which lists what is still
+missing. This document is the *why*.
+
+**Resolved since writing.** Sections 2, 3 and 4 below described a gap that is
+now filled by [metapac](https://github.com/ripytide/metapac) plus a chezmoi
+template, rather than by the bespoke tool this document was arguing for. The
+reasoning is kept because it is still the reasoning — it is why the inventory
+has provider priority and per-backend names at all, and it is the requirements
+list any future change should be checked against.
 
 ## What chezmoi is good at, and where it stops
 
