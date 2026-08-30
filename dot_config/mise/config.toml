@@ -1,4 +1,28 @@
+# Global tool versions, managed by chezmoi.
+#   mise use --global <tool>@<version>   # add/pin a tool
+#   mise ls --current                    # what's active here
 [tools]
-chezmoi = "2.63.1"
-helm = "3.18.3"
-kubectl = "1.33.2"
+# Dotfiles + shell
+chezmoi = "latest"
+direnv = "latest"
+fzf = "latest"
+ripgrep = "latest"
+xh = "latest"
+
+# Languages
+node = "latest"
+ruby = "latest"
+rust = "latest"
+
+# Kubernetes / cloud
+awscli = "latest"
+helm = "latest"
+k3d = "latest"
+kubectl = "latest"
+kubie = "latest"
+
+# Site / misc
+hugo = "0.155.1"
+"github:can1357/oh-my-pi" = "latest"
+"npm:markdownlint-cli" = "latest"
+"npm:prettier" = "latest"
