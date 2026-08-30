@@ -1,98 +1,100 @@
 # dotfiles
 
-Miscellaneous config files, etc that I manage using [chezmoi](https://www.chezmoi.io).
+Personal configuration, managed with [chezmoi](https://www.chezmoi.io).
 
-## Usage
+## Layout
 
-### Preferred archy way
+`.chezmoiroot` points chezmoi at `home/`, so the top level of this repository
+is repository documentation and everything under `home/` is a thing that lands
+in `$HOME`.
 
 ```
+.chezmoiroot              -> "home"
+home/
+  .chezmoidata/shell.yaml   single source of truth for shell config
+  .chezmoiignore
+  dot_bashrc                thin, sources ~/.config/shell
+  dot_zshrc                 thin, sources ~/.config/shell
+  dot_profile               login shells: environment only
+  dot_zshenv                every zsh: environment only
+  dot_config/shell/         the shared shell layer (see its README)
+  dot_config/               ghostty, mise, nvim
+  bin/                      personal scripts
+  README.md                 becomes ~/README.md
+```
+
+## Shell configuration
+
+Aliases, environment variables, `PATH` entries and tool integrations are
+declared once in `home/.chezmoidata/shell.yaml` and rendered into
+`~/.config/shell/*.sh` by templates. bash and zsh source the same generated
+files and differ only in a single shell-specific fragment each.
+
+Adding an alias is one line of YAML. Adding a POSIX shell is an rc file that
+copies `dot_bashrc` with one word changed. Adding a non-POSIX shell such as
+fish or nushell is one template that reads the same YAML — there is a worked
+fish example in `home/dot_config/shell/README.md`.
+
+## Installing on a new machine
+
+Both paths install [mise](https://mise.jdx.dev) first and let it manage
+chezmoi, so the two stay on known versions.
+
+### Ubuntu / Debian
+
+```sh
+sudo apt install -y curl git
+curl https://mise.run | sh
+eval "$(~/.local/bin/mise activate bash)"
+mise use --global chezmoi@latest
+chezmoi init --apply highb
+exec "$SHELL" -l
+```
+
+### Arch / Manjaro
+
+```sh
 pamac install mise
-# Will get overwritten when we pull down the new .config/mise.toml
-mise use --global chezmoi@2.63.1
-mise install
-GITHUB_USERNAME=highb chezmoi init --apply $GITHUB_USERNAME
-# Close and re-open active term/session
+mise use --global chezmoi@latest
+chezmoi init --apply highb
+exec "$SHELL" -l
 ```
 
-### curly way
+### Verifying the download
 
-```
+```sh
 gpg --keyserver hkps://keyserver.ubuntu.com --recv-keys 0x7413A06D
 curl https://mise.jdx.dev/install.sh.sig | gpg --decrypt > install.sh
-# ensure the above is signed with the mise release key
+# confirm the signature is mise's release key before running
 sh ./install.sh
-# Will get overwritten when we pull down the new .config/mise.toml
-mise use --global chezmoi@2.63.1
-mise install
-GITHUB_USERNAME=highb sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply $GITHUB_USERNAME
-# Close and re-open active term/session
-./bin/up
 ```
+
+## Day to day
+
+```sh
+chezmoi cd            # into this repository
+chezmoi edit --apply  # edit a managed file and apply it in one step   (alias: cme)
+chezmoi diff          # what would change
+chezmoi apply         # change it
+chezmoi update        # pull, then apply
+dotpush "message"     # add, commit and push this repository
+```
+
+Dotfiles are **not** synced automatically on shell startup. That used to run on
+every interactive bash shell, which made every new terminal wait on the
+network; `chezmoi update` is now something you run deliberately.
+
+## Vendored code
+
+- `home/dot_config/nvim` — started from
+  [kickstart.nvim](https://github.com/nvim-lua/kickstart.nvim) and since
+  diverged. Fully owned here, not tracked upstream.
 
 ## TODO
 
-- setup a boot.sh script to do the above steps correctly on different OS
-- add something similar to my [.bhell](https://github.com/highb/.bhell)
-scripts here that will manage installing any necessary packages using some cobbled
-together scripts that use _waves hands around_ a package manager (Nix, brew, etc.)
-- determine a good way to sync the .config/chezmoi/chezmoi.toml file, as well
-- manage application color schemes in some sane way
-- use some fancy templates and secrets manager stuff
-- add other useful scripts powered by some useful shared libraries like https://gitlab.com/bertrand-benoit/scripts-common/-/blob/master/utilities.sh?ref_type=heads
-
-# Home Directory Structure
-
-This repository contains a partial layout of my home directory, which is managed and synced across Linux systems using [Chezmoi](https://github.com/twpayne/chezmoi). Each directory with an organizational scheme typically has a README.md file for reference.
-
-## Directory Structure
-
-- **Applications/**
-  - Directory for storing flatpak and AppImage files. Managed outside of Chezmoi.
-  - *TODO:* Consider implementing an idempotent tool for flatpak management and installation.
-
-- **bin/**
-  - Directory for storing single binary tools and personal scripts. Scripts are synced by Chezmoi, while binaries are often directly downloaded.
-  - *TODO:* Consider implementing an idempotent tool for binary management (aside from asdf). Could be nix?
-
-- **Desktop/**
-  - Generally empty, as I do not frequently access my desktop.
-
-- **Documents/**
-  - Various document artifacts, sorted into [PARA](https://fortelabs.co/blog/para/) subdirectories for ease of organization.
-
-- **Downloads/**
-  - Temporary landing area for downloaded files.
-
-- **Music/**
-  - Storage for MP3s and other music files. Largely unnecessary due to streaming services like Spotify or Synology.
-
-- **Pictures/**
-  - Various pictures, sorted into relevant categories. Image data related to [PARA](https://fortelabs.com/blog/para/) projects should be stored under Documents.
-
-- **Public/**
-  - Directory for shared files.
-
-- **src/**
-  - Directory for storing various source code repositories, organized by the organization that "owns" the source.
-
-- **Templates/**
-  - GNOME (Nautilus) file templates, accessible via the file browser's right-click menu. Potentially useful, but may not be frequently utilized.
-  - This is apparently an XDG standard.
-
-- **Videos/**
-  - Directory for storing video content. Video data related to [PARA](https://fortelabs.com/blog/para/) projects should be stored under Documents.
-
-- **Dotfiles (hidden files)**
-  - Collection of dotfiles, managed and synced by Chezmoi. Only a subset of dotfiles that I care about are actively managed.
-
-## Usage
-This directory structure and file management helps maintain organization and consistency across my Linux systems. Each directory serves a specific purpose, facilitating efficient file management and access.
-
-## Providence/Vendoring
-
-- `.config/fish/functions/g*.fish` https://github.com/jmartindf/git-alias-pack-fish
-
-## Contributing
-If you have suggestions for improving this directory structure or tools for management, feel free to open an issue or pull request.
-
+- A `boot.sh` that handles package installation per OS, absorbing the useful
+  parts of [.bhell](https://github.com/highb/.bhell)
+- Manage application colour schemes coherently
+- Secrets via a real backend rather than by leaving them out
+- Package management: `fzf`, `fd`, `bat`, `eza`, `zoxide`, `direnv` are all
+  assumed by `shell.yaml` but nothing installs them yet

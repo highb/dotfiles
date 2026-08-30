@@ -1,0 +1,12 @@
+# ~/.config/nvim is a git checkout in its own right. chezmoi owns the config
+# under it; git owns the repository metadata. Never let `chezmoi add -r` pull
+# one into the other again.
+.config/nvim/.git
+.config/nvim/.github
+
+# Machine-local shell overrides, sourced by .bashrc/.zshrc if present.
+.bashrc.local
+.zshrc.local
+
+*.bak
+.DS_Store
