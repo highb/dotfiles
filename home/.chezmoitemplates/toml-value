@@ -1,0 +1,7 @@
+{{- /* Render a value as TOML. metapac option values are not all strings:
+       cargo takes features = ["cli"] and locked = true. */ -}}
+{{- if kindIs "bool" . }}{{ . }}
+{{- else if kindIs "float64" . }}{{ . }}
+{{- else if kindIs "int" . }}{{ . }}
+{{- else if kindIs "slice" . }}[{{ range $i, $e := . }}{{ if $i }}, {{ end }}"{{ $e }}"{{ end }}]
+{{- else }}"{{ . }}"{{ end -}}

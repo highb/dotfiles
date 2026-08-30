@@ -1,0 +1,19 @@
+name = "go"
+description = "Go project managed by mise"
+kickstart_version = 1
+post_gen_hooks = [{ name = "trust the mise config", path = "post_gen.sh" }]
+
+[[variables]]
+name = "project_name"
+default = "my-tool"
+prompt = "Project name?"
+
+[[variables]]
+name = "module_path"
+default = "github.com/highb/{{ project_name }}"
+prompt = "Module path?"
+
+[[variables]]
+name = "go_version"
+default = "1.27"
+prompt = "Go version?"

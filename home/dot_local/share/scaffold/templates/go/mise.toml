@@ -1,0 +1,14 @@
+[tools]
+go = "{{ go_version }}"
+
+[tasks.build]
+run = "go build ./..."
+
+[tasks.test]
+run = "go test ./..."
+
+[tasks.lint]
+run = "go vet ./..."
+
+[tasks.check]
+depends = ["lint", "test"]

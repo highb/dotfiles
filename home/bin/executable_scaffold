@@ -1,0 +1,242 @@
+#!/usr/bin/env python3
+"""Scaffold a project from a mise-aware template.
+
+Two modes, because the two real cases are different operations:
+
+  scaffold <type> <name>     create a new project directory
+  scaffold <type> --here     merge the template's mise config into the project
+                             you are already standing in
+
+The first is what scaffolding tools do. The second is what you actually want
+most of the time - the repo exists, and it needs the right tools, env and
+tasks. No scaffolding tool does that, because they all generate fresh trees.
+
+--here only ever ADDS. It never overwrites a value the project already sets,
+and it backs the file up first.
+"""
+
+import argparse
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import tomllib
+
+TEMPLATES = os.environ.get(
+    "SCAFFOLD_TEMPLATE_DIR",
+    os.path.expanduser("~/.local/share/scaffold/templates"),
+)
+
+
+def die(msg, code=2):
+    print(f"scaffold: {msg}", file=sys.stderr)
+    sys.exit(code)
+
+
+def types():
+    if not os.path.isdir(TEMPLATES):
+        return []
+    return sorted(
+        d for d in os.listdir(TEMPLATES)
+        if os.path.exists(os.path.join(TEMPLATES, d, "template.toml"))
+    )
+
+
+def render(kind, outdir, no_input):
+    """Run kickstart into outdir. Returns nothing; raises on failure."""
+    cmd = ["kickstart", os.path.join(TEMPLATES, kind), "-o", outdir]
+    if no_input:
+        cmd.append("--no-input")
+    proc = subprocess.run(cmd)
+    if proc.returncode != 0:
+        die("kickstart failed", proc.returncode)
+
+
+def flatten(d, prefix=()):
+    """{'tasks': {'test': {'run': 'x'}}} -> {('tasks','test','run'): 'x'}"""
+    out = {}
+    for k, v in d.items():
+        if isinstance(v, dict):
+            out.update(flatten(v, prefix + (k,)))
+        else:
+            out[prefix + (k,)] = v
+    return out
+
+
+def emit_pairs(body, prefix=""):
+    """Render a table body as TOML lines.
+
+    A dict whose values are all scalars becomes an inline table; a deeper nest
+    becomes a dotted key, so `{'_': {'python': {'venv': {...}}}}` comes back out
+    as `_.python.venv = { path = ".venv", create = true }` - which is both valid
+    TOML and the form mise's own documentation uses.
+    """
+    lines = []
+    for k, v in body.items():
+        key = f"{prefix}{k}"
+        if isinstance(v, dict):
+            if v and all(not isinstance(x, dict) for x in v.values()):
+                inner = ", ".join(f"{ik} = {json_ish(iv)}" for ik, iv in v.items())
+                lines.append(f"{key} = {{ {inner} }}")
+            elif not v:
+                lines.append(f"{key} = {{}}")
+            else:
+                lines.extend(emit_pairs(v, prefix=f"{key}."))
+        else:
+            lines.append(f"{key} = {json_ish(v)}")
+    return lines
+
+
+def toml_table(name, body):
+    return "\n".join([f"[{name}]"] + emit_pairs(body))
+
+
+def render_tables(name, body):
+    """A [tasks] table is written as one [tasks.<name>] block per task."""
+    if name == "tasks":
+        return [toml_table(f"tasks.{n}", b) if isinstance(b, dict)
+                else f"[tasks]\n{n} = {json_ish(b)}" for n, b in body.items()]
+    return [toml_table(name, body)]
+
+
+def json_ish(v):
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, (int, float)):
+        return str(v)
+    if isinstance(v, list):
+        return "[" + ", ".join(json_ish(x) for x in v) + "]"
+    if isinstance(v, dict):
+        return "{ " + ", ".join(f"{k} = {json_ish(x)}" for k, x in v.items()) + " }"
+    return '"' + str(v).replace('"', '\\"') + '"'
+
+
+def merge_here(kind, target, assume_yes):
+    dest = os.path.join(target, "mise.toml")
+
+    # Nothing to merge with: render straight into place.
+    if not os.path.exists(dest):
+        render(kind, target, no_input=True)
+        print(f"wrote {dest}")
+        trust(target)
+        return 0
+
+    with tempfile.TemporaryDirectory() as tmp:
+        out = os.path.join(tmp, "gen")
+        render(kind, out, no_input=True)
+        src = os.path.join(out, "mise.toml")
+        if not os.path.exists(src):
+            die(f"template `{kind}` produced no mise.toml")
+        desired = tomllib.load(open(src, "rb"))
+
+    current = tomllib.load(open(dest, "rb"))
+    cur_flat, des_flat = flatten(current), flatten(desired)
+    additions = {k: v for k, v in des_flat.items() if k not in cur_flat}
+    conflicts = {k: (cur_flat[k], v) for k, v in des_flat.items()
+                 if k in cur_flat and cur_flat[k] != v}
+
+    if conflicts:
+        print("Already set differently, left alone:")
+        for path, (mine, theirs) in sorted(conflicts.items()):
+            print(f"  {'.'.join(path)}: {mine!r}  (template wanted {theirs!r})")
+        print()
+
+    if not additions:
+        print(f"{dest} already has everything {kind} would add.")
+        return 0
+
+    # Merge additions into a copy, preserving the original table order and
+    # appending any table the template introduces.
+    merged_doc = {t: dict(b) if isinstance(b, dict) else b for t, b in current.items()}
+    for path, val in additions.items():
+        node = merged_doc.setdefault(path[0], {})
+        for part in path[1:-1]:
+            node = node.setdefault(part, {})
+        node[path[-1]] = val
+
+    order = list(current.keys()) + [t for t in desired if t not in current]
+    blocks = []
+    for table in order:
+        if table in merged_doc:
+            blocks.extend(render_tables(table, merged_doc[table]))
+
+    print(f"{kind} would add to {dest}:")
+    for path, val in sorted(additions.items()):
+        print(f"  + {'.'.join(path)} = {json_ish(val)}")
+
+    if not assume_yes:
+        try:
+            if input("\nApply? [y/N] ").strip().lower() not in ("y", "yes"):
+                print("nothing changed")
+                return 0
+        except EOFError:
+            print("\nnot a terminal; re-run with --yes")
+            return 0
+
+    backup = dest + ".bak"
+    shutil.copy(dest, backup)
+    open(dest, "w").write("\n\n".join(blocks).rstrip() + "\n")
+    tomllib.load(open(dest, "rb"))  # fail loudly rather than leave it broken
+    print(f"updated {dest} (previous version at {backup})")
+    trust(target)
+    return 0
+
+
+def trust(target):
+    if shutil.which("mise"):
+        subprocess.run(["mise", "trust", target],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def main():
+    known = types()
+    p = argparse.ArgumentParser(
+        prog="scaffold",
+        description="Create a project from a template, or add one to this project.",
+        epilog="types: " + (", ".join(known) or "(none found)"),
+    )
+    p.add_argument("type", nargs="?", help="template to use")
+    p.add_argument("name", nargs="?", help="directory to create")
+    p.add_argument("--here", action="store_true",
+                   help="merge into the current directory instead of creating one")
+    p.add_argument("--yes", "-y", action="store_true", help="do not prompt")
+    p.add_argument("--list", "-l", action="store_true", help="list template types")
+    args = p.parse_args()
+
+    if args.list or not args.type:
+        for t in known:
+            desc = ""
+            try:
+                d = tomllib.load(open(os.path.join(TEMPLATES, t, "template.toml"), "rb"))
+                desc = d.get("description", "")
+            except (OSError, tomllib.TOMLDecodeError):
+                pass
+            print(f"  {t:<12} {desc}")
+        return 0 if known else 2
+
+    if args.type not in known:
+        die(f"unknown type `{args.type}`; try one of: {', '.join(known) or '(none)'}")
+    if not shutil.which("kickstart"):
+        die("kickstart is not installed (cargo install kickstart --features=cli)")
+
+    if args.here:
+        if args.name:
+            die("--here takes no directory argument")
+        return merge_here(args.type, os.getcwd(), args.yes)
+
+    if not args.name:
+        die("give a directory name, or use --here")
+    if os.path.exists(args.name) and os.listdir(args.name):
+        die(f"{args.name} exists and is not empty")
+    render(args.type, args.name, no_input=args.yes)
+    trust(args.name)
+    print(f"created {args.name}")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(130)

@@ -1,0 +1,21 @@
+name = "node"
+description = "Node project managed by mise"
+kickstart_version = 1
+post_gen_hooks = [{ name = "trust the mise config", path = "post_gen.sh" }]
+
+[[variables]]
+name = "project_name"
+default = "my-app"
+prompt = "Project name?"
+
+[[variables]]
+name = "node_version"
+default = "lts"
+prompt = "Node version?"
+choices = ["lts", "latest", "22", "20"]
+
+[[variables]]
+name = "package_manager"
+default = "pnpm"
+prompt = "Package manager?"
+choices = ["pnpm", "npm", "bun", "yarn"]

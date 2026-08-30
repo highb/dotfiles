@@ -1,0 +1,14 @@
+[tools]
+# Pinned deliberately: Hugo changes template behaviour between minor releases
+# and an unpinned site breaks on an unrelated upgrade.
+hugo = "{{ hugo_version }}"
+
+[tasks.serve]
+description = "Local preview with drafts"
+run = "hugo server -D"
+
+[tasks.build]
+run = "hugo --minify"
+
+[tasks.clean]
+run = "rm -rf public resources"

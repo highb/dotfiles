@@ -1,0 +1,17 @@
+[tools]
+rust = "{{ rust_version }}"
+
+[tasks.build]
+run = "cargo build"
+
+[tasks.test]
+run = "cargo test"
+
+[tasks.lint]
+run = "cargo clippy -- -D warnings"
+
+[tasks.fmt]
+run = "cargo fmt --all"
+
+[tasks.check]
+depends = ["lint", "test"]

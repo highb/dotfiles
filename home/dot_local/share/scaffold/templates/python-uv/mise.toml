@@ -1,0 +1,27 @@
+[tools]
+python = "{{ python_version }}"
+uv = "latest"
+ruff = "latest"
+
+[env]
+_.python.venv = { path = ".venv", create = true }
+
+[tasks.setup]
+description = "Sync dependencies into .venv"
+run = "uv sync"
+
+[tasks.test]
+description = "Run the test suite"
+run = "uv run pytest"
+
+[tasks.lint]
+description = "Lint"
+run = "ruff check ."
+
+[tasks.fmt]
+description = "Format"
+run = "ruff format ."
+
+[tasks.check]
+description = "Everything CI would run"
+depends = ["lint", "test"]

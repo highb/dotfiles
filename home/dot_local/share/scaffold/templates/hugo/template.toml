@@ -1,0 +1,14 @@
+name = "hugo"
+description = "Hugo static site pinned to a known-good version"
+kickstart_version = 1
+post_gen_hooks = [{ name = "trust the mise config", path = "post_gen.sh" }]
+
+[[variables]]
+name = "project_name"
+default = "my-site"
+prompt = "Site name?"
+
+[[variables]]
+name = "hugo_version"
+default = "0.155.1"
+prompt = "Hugo version? (pinned - Hugo breaks themes between minors)"

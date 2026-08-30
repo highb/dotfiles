@@ -1,0 +1,16 @@
+name = "rust"
+description = "Rust project managed by mise, with clippy and fmt tasks"
+kickstart_version = 1
+post_gen_hooks = [{ name = "trust the mise config", path = "post_gen.sh" }]
+
+[[variables]]
+name = "project_name"
+default = "my-crate"
+prompt = "Crate name?"
+validation = "^([a-zA-Z][a-zA-Z0-9_-]*)$"
+
+[[variables]]
+name = "rust_version"
+default = "stable"
+prompt = "Rust toolchain?"
+choices = ["stable", "beta", "nightly"]

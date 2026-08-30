@@ -261,6 +261,18 @@ packages:
         brew: { name: k3d }
         mise: { name: k3d }
 
+    kickstart:
+      status: active
+      note: "project scaffolding, Tera-templated - the same engine mise uses"
+      providers:
+        cargo: { name: kickstart, options: { features: [cli], locked: true } }
+
+    metapac:
+      status: active
+      note: "installs everything else here; bootstrapped by cargo"
+      providers:
+        cargo: { name: metapac, options: { locked: true } }
+
     kubectl:
       status: active
       prefer: [mise]

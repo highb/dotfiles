@@ -43,7 +43,9 @@ no entry for it or is not used on this platform.
 {{ $backend }} = { packages = [
 {{- range $item := $items }}
 {{- $opts := get $item.spec "options" | default (dict) }}
-  { name = "{{ $item.spec.name }}"{{ if $opts }}, options = { {{ range $k, $v := $opts }}{{ $k }} = "{{ $v }}" {{ end }}}{{ end }} },
+{{- $pairs := list }}
+{{- range $k, $v := $opts }}{{ $pairs = append $pairs (printf "%s = %s" $k (includeTemplate "toml-value" $v)) }}{{ end }}
+  { name = "{{ $item.spec.name }}"{{ if $opts }}, options = { {{ $pairs | join ", " }} }{{ end }} },
 {{- end }}
 ] }
 {{- end }}

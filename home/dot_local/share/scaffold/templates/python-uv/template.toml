@@ -1,0 +1,23 @@
+name = "python-uv"
+description = "Python project managed by mise + uv, linted with ruff"
+kickstart_version = 1
+post_gen_hooks = [
+    { name = "trust and install the mise config", path = "post_gen.sh" },
+]
+
+[[variables]]
+name = "project_name"
+default = "my-project"
+prompt = "Project name?"
+validation = "^([a-zA-Z][a-zA-Z0-9_-]*)$"
+
+[[variables]]
+name = "module_name"
+default = "{{ project_name | replace(from='-', to='_') }}"
+derived = true
+
+[[variables]]
+name = "python_version"
+default = "3.13"
+prompt = "Python version?"
+choices = ["3.13", "3.12", "3.11"]

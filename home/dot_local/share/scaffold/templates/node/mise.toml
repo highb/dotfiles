@@ -1,0 +1,12 @@
+[tools]
+node = "{{ node_version }}"
+{% if package_manager != "npm" %}{{ package_manager }} = "latest"
+{% endif %}
+[tasks.setup]
+run = "{{ package_manager }} install"
+
+[tasks.dev]
+run = "{{ package_manager }} run dev"
+
+[tasks.test]
+run = "{{ package_manager }} test"
