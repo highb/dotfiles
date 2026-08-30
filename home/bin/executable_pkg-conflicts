@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+"""Report tools installed by more than one package manager.
+
+metapac's `unmanaged` lists, per backend, what is installed but undeclared.
+It never cross-references that against what you declared under a *different*
+backend, so the interesting case stays invisible: a tool you asked for from
+mise that apt also has, where which one you get is decided by PATH order.
+
+Compares `metapac unmanaged` against the generated group file and reports the
+overlap. Read-only; changes nothing.
+
+Exit: 0 clean, 1 conflicts found, 2 could not run.
+"""
+
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+GROUPS = os.path.expanduser("~/.config/metapac/groups/dotfiles.toml")
+BINARIES = os.path.expanduser("~/.config/metapac/binaries.json")
+
+
+def die(msg, code=2):
+    print(f"pkg-conflicts: {msg}", file=sys.stderr)
+    sys.exit(code)
+
+
+def parse_groups(text):
+    """metapac group format: `backend = { packages = [ ... ] }`.
+
+    Both the generated file (long form, `{ name = "x" }`) and metapac's own
+    `unmanaged` output (short form, bare `"x"`) parse with the same scan.
+    """
+    found, backend = {}, None
+    for line in text.splitlines():
+        m = re.match(r"^(\w+)\s*=\s*\{", line)
+        if m:
+            backend = m.group(1)
+            found.setdefault(backend, set())
+            continue
+        if backend is None:
+            continue
+        m = re.search(r'name\s*=\s*"([^"]+)"', line) or re.match(r'\s*"([^"]+)"', line)
+        if m:
+            found[backend].add(m.group(1))
+    return found
+
+
+def main():
+    if not shutil.which("metapac"):
+        die("metapac is not installed (cargo install metapac --locked)")
+    if not os.path.exists(GROUPS):
+        die(f"no generated group file at {GROUPS}; run `chezmoi apply` first")
+
+    declared = {}
+    for backend, names in parse_groups(open(GROUPS).read()).items():
+        for n in names:
+            declared[n] = backend
+
+    proc = subprocess.run(
+        ["metapac", "unmanaged"], capture_output=True, text=True
+    )
+    if proc.returncode != 0:
+        # One failing backend aborts the whole metapac run, so say which.
+        err = proc.stderr.strip().splitlines()
+        die("`metapac unmanaged` failed:\n  " + "\n  ".join(err[:6]))
+
+    installed = parse_groups(proc.stdout)
+
+    # A package's name and the binary it installs are often different, and the
+    # difference depends on the backend: apt's bat is batcat, mise's is bat.
+    # chezmoi generates the mapping alongside the group file.
+    binaries = {}
+    if os.path.exists(BINARIES):
+        try:
+            binaries = json.load(open(BINARIES))
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    conflicts = []
+    for name, backend in sorted(declared.items()):
+        for other, names in installed.items():
+            if other != backend and name in names:
+                conflicts.append((name, backend, other))
+
+    if not conflicts:
+        print(f"No conflicts. {len(declared)} tools declared across "
+              f"{len(set(declared.values()))} backends.")
+        return 0
+
+    width = max(len(c[0]) for c in conflicts)
+    print(f"{len(conflicts)} tool(s) installed by more than one package manager.")
+    print("PATH order decides which one you actually get.\n")
+    for name, backend, other in conflicts:
+        print(f"  {name:<{width}}  declared via {backend}, also installed via {other}")
+        which = shutil.which(binaries.get(name, name))
+        if which:
+            print(f"  {'':<{width}}  currently resolves to {which}")
+    print("\nPaths above are resolved against this script's PATH. An interactive")
+    print("shell with mise activated may pick a different one, which is the point:")
+    print("two installs means the answer depends on who is asking.")
+    print("\nTo resolve, either remove the duplicate:")
+    for name, _, other in conflicts:
+        print(f"  {other} remove {name}" if other == "snap"
+              else f"  sudo apt remove {name}" if other == "apt"
+              else f"  # remove {name} from {other}")
+    print("\nor change its backend in packages.yaml and `chezmoi apply`.")
+    return 1
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(130)

@@ -33,24 +33,20 @@ packages:
   # The first backend in the list that (a) is in this platform's list and
   # (b) has an entry for the tool wins. A tool's `prefer` is tried ahead of it.
   #
-  # Rationale: mise first because it is cross-platform, unprivileged, and the
-  # only backend that pins versions properly. The native system manager next,
-  # because it is the one that gets security updates. snap late, as it most
-  # often duplicates something already installed.
+  # Rationale: mise first - cross-platform, unprivileged, and one of the few
+  # backends metapac can actually pin a version through. Then nix, brew, cargo
+  # and uv, which are all user-scoped and carry current versions. The OS package
+  # manager is deliberately late: for fast-moving CLI tools it ships whatever
+  # the distro froze, and it is the hardest to pin. snap and flatpak last.
   #
-  # nix is deliberately absent. No tool here has a nix entry, so it added no
-  # coverage - and metapac 0.10.1's nix backend runs
-  # `nix profile list --json --no-pretty`, a flag this machine's nix 2.25.3
-  # rejects. metapac aborts the whole command when any one backend errors, so
-  # enabling nix broke `metapac unmanaged` entirely. Re-add it only alongside
-  # a nix newer than the flag, and only if something actually installs by nix.
+  # nix is listed but probed before use - see backend_probe below.
   provider_priority:
-    default:      [mise, brew, apt, dnf, arch, snap, cargo]
-    linux-ubuntu: [mise, apt, snap, brew, cargo]
-    linux-debian: [mise, apt, brew, cargo]
-    linux-arch:   [mise, arch, cargo]
-    linux-fedora: [mise, dnf, cargo]
-    darwin:       [mise, brew, cargo]
+    default:      [mise, nix, brew, cargo, uv, apt, dnf, arch, snap, flatpak]
+    linux-ubuntu: [mise, nix, brew, cargo, uv, apt, snap, flatpak]
+    linux-debian: [mise, nix, brew, cargo, uv, apt, flatpak]
+    linux-arch:   [mise, nix, brew, cargo, uv, arch, flatpak]
+    linux-fedora: [mise, nix, brew, cargo, uv, dnf, flatpak]
+    darwin:       [mise, nix, brew, cargo, uv, mas]
 
   # How to tell whether a backend actually exists on this machine. Resolution
   # skips a backend whose binary is absent, so a tool falls through to the next
@@ -58,6 +54,18 @@ packages:
   # that is not installed. metapac has no equivalent: its enabled_backends is
   # static, so it would happily be told to install a brew package on a machine
   # with no brew.
+  # A backend whose binary exists but which cannot actually be queried is
+  # worse than one that is absent: metapac aborts the entire run when any one
+  # backend errors. Anything with a probe here must run cleanly or it is
+  # dropped from resolution on this machine.
+  #
+  # nix has one because metapac 0.10.1 calls
+  # `nix profile list --json --no-pretty`, and nix rejected --no-pretty until
+  # 2.26. On an older nix this probe fails and nix is skipped; on a newer one
+  # it passes and nix takes its place second in the priority list.
+  backend_probe:
+    nix: nix profile list --json --no-pretty
+
   backend_binaries:
     apt: apt-get
     arch: pacman
@@ -65,9 +73,12 @@ packages:
     cargo: cargo
     dnf: dnf
     flatpak: flatpak
+    mas: mas
     mise: mise
     nix: nix
+    pipx: pipx
     snap: snap
+    uv: uv
 
   # Only `active` tools are installed. superseded / unmaintained / retired are
   # kept for the record and reported by `metapac unmanaged` if still present.
@@ -81,6 +92,7 @@ packages:
     age:
       status: active
       providers:
+        mise: { name: age }
         apt: { name: age }
         brew: { name: age }
 
@@ -95,6 +107,7 @@ packages:
       status: active
       note: "referenced by shell.yaml, never installed here"
       providers:
+        mise: { name: atuin }
         brew: { name: atuin }
 
     awscli:
@@ -109,7 +122,8 @@ packages:
       status: active
       note: "apt installs the binary as batcat on Debian and Ubuntu"
       providers:
-        apt: { name: bat }
+        mise: { name: bat }
+        apt: { name: bat, binary: batcat }
         brew: { name: bat }
 
     build-essential:
@@ -160,6 +174,7 @@ packages:
       status: active
       note: "the maintained fork of exa"
       providers:
+        mise: { name: eza }
         apt: { name: eza }
         brew: { name: eza }
 
@@ -167,7 +182,8 @@ packages:
       status: active
       note: "apt installs the binary as fdfind on Debian and Ubuntu"
       providers:
-        apt: { name: fd-find }
+        mise: { name: fd }
+        apt: { name: fd-find, binary: fdfind }
         brew: { name: fd }
 
     file:
@@ -188,6 +204,7 @@ packages:
     gh:
       status: active
       providers:
+        mise: { name: gh }
         apt: { name: gh }
         brew: { name: gh }
 
@@ -208,7 +225,7 @@ packages:
       status: active
       note: "installed by curl-to-bash on darwin in .bhell"
       providers:
-        snap: { name: google-cloud-cli, options: { confinement: classic } }
+        snap: { name: google-cloud-cli, binary: gcloud, options: { confinement: classic } }
 
     helm:
       status: active
@@ -233,6 +250,7 @@ packages:
     jq:
       status: active
       providers:
+        mise: { name: jq }
         apt: { name: jq }
         brew: { name: jq }
 
@@ -261,12 +279,13 @@ packages:
     kustomize:
       status: active
       providers:
+        mise: { name: kustomize }
         brew: { name: kustomize }
 
     magic-wormhole:
       status: active
       providers:
-        apt: { name: magic-wormhole }
+        apt: { name: magic-wormhole, binary: wormhole }
         brew: { name: magic-wormhole }
 
     minikube:
@@ -278,6 +297,7 @@ packages:
     navi:
       status: active
       providers:
+        mise: { name: navi }
         brew: { name: navi }
 
     oh-my-zsh:
@@ -288,7 +308,7 @@ packages:
     procps:
       status: active
       providers:
-        apt: { name: procps }
+        apt: { name: procps, binary: ps }
         arch: { name: procps-ng }
 
     pwgen:
@@ -301,9 +321,9 @@ packages:
       status: active
       prefer: [mise]
       providers:
-        apt: { name: ripgrep }
+        apt: { name: ripgrep, binary: rg }
         brew: { name: ripgrep }
-        mise: { name: ripgrep }
+        mise: { name: ripgrep, binary: rg }
         snap: { name: ripgrep, options: { confinement: classic } }
 
     skaffold:
@@ -321,6 +341,7 @@ packages:
       status: active
       note: "installed to /usr/local/bin by the upstream install script; not owned by any package manager on this machine"
       providers:
+        mise: { name: starship }
         brew: { name: starship }
         snap: { name: starship }
 
@@ -341,17 +362,20 @@ packages:
     yq:
       status: active
       providers:
+        mise: { name: yq }
         brew: { name: yq }
 
     zola:
       status: active
       providers:
+        mise: { name: zola }
         brew: { name: zola }
         snap: { name: zola }
 
     zoxide:
       status: active
       providers:
+        mise: { name: zoxide }
         apt: { name: zoxide }
         brew: { name: zoxide }
 

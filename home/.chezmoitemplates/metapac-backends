@@ -1,10 +1,19 @@
-{{- /* Backends usable on this machine: in this platform's priority order, and
-       actually present. Emitted space-separated for `splitList " "`.
-       Shared by the config and group templates. */ -}}
+{{- /* Backends usable on this machine: in this platform's priority order,
+       present, and - where a probe is declared - actually working.
+       Emitted space-separated for `splitList " "`. Shared by the config and
+       group templates so the two cannot disagree. */ -}}
 {{- $platform := includeTemplate "metapac-platform" . -}}
 {{- $out := list -}}
 {{- range $b := index .packages.provider_priority $platform -}}
 {{-   $bin := get $.packages.backend_binaries $b -}}
-{{-   if and $bin (lookPath $bin) -}}{{- $out = append $out $b -}}{{- end -}}
+{{-   if and $bin (lookPath $bin) -}}
+{{-     $probe := get $.packages.backend_probe $b -}}
+{{-     if $probe -}}
+{{-       $r := output "sh" "-c" (printf "%s >/dev/null 2>&1 && echo ok || echo no" $probe) | trim -}}
+{{-       if eq $r "ok" -}}{{- $out = append $out $b -}}{{- end -}}
+{{-     else -}}
+{{-       $out = append $out $b -}}
+{{-     end -}}
+{{-   end -}}
 {{- end -}}
 {{ $out | join " " }}
