@@ -1,0 +1,8 @@
+# Keys trusted to sign commits, so `git log --show-signature` and %G? can
+# verify locally. Without this git cannot check its own signatures and reports
+# every commit as N (no signature), which looks alarming and is not true.
+#
+# Same key for both identities: the Codeberg identity in ~/src/codeberg/.gitconfig
+# reuses it, only the name and address differ.
+759848+highb@users.noreply.github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJjmSuai7qgc96vL5VKBGT5xlA7Q87cAmjyL/+m1vVTW
+bmhoch@noreply.codeberg.org ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJjmSuai7qgc96vL5VKBGT5xlA7Q87cAmjyL/+m1vVTW
