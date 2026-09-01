@@ -37,37 +37,41 @@ fish example in `home/dot_config/shell/README.md`.
 
 ## Installing on a new machine
 
-Both paths install [mise](https://mise.jdx.dev) first and let it manage
-chezmoi, so the two stay on known versions.
-
-### Ubuntu / Debian
-
 ```sh
-sudo apt install -y curl git
-curl https://mise.run | sh
-eval "$(~/.local/bin/mise activate bash)"
-mise use --global chezmoi@latest
-chezmoi init --apply highb
-exec "$SHELL" -l
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/highb/dotfiles/main/bootstrap.sh)"
 ```
 
-### Arch / Manjaro
+`bootstrap.sh` is idempotent — re-running it is a no-op, and an interrupted run
+can just be repeated. It will not install system packages behind your back: if
+`curl` or `git` is missing it prints the command for your platform and stops.
 
-```sh
-pamac install mise
-mise use --global chezmoi@latest
-chezmoi init --apply highb
-exec "$SHELL" -l
-```
+What it does, and why in that order:
 
-### Verifying the download
+1. **mise**, from `https://mise.run`. The one bootstrap that still matters.
+2. **chezmoi, via mise.** Deliberately not a snap and not a loose binary in
+   `~/bin` — both had happened here, and the `~/bin` copy was shadowing
+   everything else with a build from March 2024.
+3. **`chezmoi init --apply`**, which lays down the dotfiles and generates
+   `~/.config/metapac/` from the inventory.
+4. **rust, via mise** — needed only to build metapac.
+5. **`cargo install metapac --locked`.**
+6. Stops, and tells you to run `metapac sync` yourself.
 
-```sh
-gpg --keyserver hkps://keyserver.ubuntu.com --recv-keys 0x7413A06D
-curl https://mise.jdx.dev/install.sh.sig | gpg --decrypt > install.sh
-# confirm the signature is mise's release key before running
-sh ./install.sh
-```
+Steps 4 and 5 exist for one package. metapac publishes no release binaries, so
+it cannot come from mise or `cargo-binstall` and has to be compiled; everything
+else in the inventory arrives through metapac afterwards. If upstream ever ships
+binaries, both steps collapse into a single `mise use --global`.
+
+The last step is not automatic on purpose. `metapac sync` has no dry-run and
+installs system packages under sudo, which is a decision rather than a bootstrap
+step. `METAPAC_AUTOSYNC=1` opts into running it from the chezmoi hook.
+
+### Arch or Fedora
+
+The same one-liner works — `bootstrap.sh` detects the package manager for its
+prerequisite check. Note that the inventory itself is still Ubuntu- and
+macOS-shaped: `arch:` and `dnf:` names are missing for most tools, so a lot will
+report as UNRESOLVED until they are filled in.
 
 ## Day to day
 
@@ -129,8 +133,8 @@ in `TODO.md` in [.bhell](https://github.com/highb/.bhell).
 
 - `metapac sync` to install the tools `shell.yaml` assumes: `fd`, `bat`, `eza`,
   `zoxide` (`atuin` is still unresolvable — brew only, and there is no brew here)
-- Resolve two live duplicate installs: `ripgrep` (mise + apt) and `1password`
-  (snap + apt)
+- Run `pkg-doctor`: 4 duplicate installs, 13 unowned binaries, 17 declared
+  tools not yet installed
 - Fill in `arch:` and `dnf:` names, when a machine of either kind exists
 - Manage application colour schemes coherently
 - Secrets via a real backend rather than by leaving them out

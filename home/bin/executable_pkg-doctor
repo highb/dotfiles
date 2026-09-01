@@ -1,0 +1,230 @@
+#!/usr/bin/env python3
+"""Report the real state of installed software.
+
+Three questions no single tool answers:
+
+  CONFLICTS  installed by more than one package manager, so PATH order
+             silently decides which one you get
+  UNOWNED    on PATH but claimed by no package manager - the curl-into-
+             /usr/local/bin case, invisible to every manager by definition
+  MISSING    declared in the inventory but not actually present
+
+metapac's `unmanaged` covers none of these: it lists undeclared packages
+per backend, and never compares backends against each other or against the
+things no backend installed.
+
+Read-only. Exit: 0 clean, 1 findings, 2 could not run.
+"""
+
+import glob
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+HOME = os.path.expanduser("~")
+GROUPS = f"{HOME}/.config/metapac/groups/dotfiles.toml"
+BINARIES = f"{HOME}/.config/metapac/binaries.json"
+
+# PATH roots whose contents are owned by a known manager. Order matters:
+# the first matching prefix wins, so put specific paths before general ones.
+ROOTS = [
+    (f"{HOME}/.local/share/mise/installs", "mise"),
+    (f"{HOME}/.local/share/mise/shims", "mise"),
+    (f"{HOME}/.cargo/bin", "cargo"),
+    (f"{HOME}/.nix-profile/bin", "nix"),
+    ("/nix/", "nix"),
+    ("/snap/", "snap"),
+    ("/var/lib/snapd/snap/bin", "snap"),
+    (f"{HOME}/bin", "yours"),
+    (f"{HOME}/.local/bin", "yours"),
+    (f"{HOME}/.local/share/JetBrains", "jetbrains"),
+    (f"{HOME}/.local/share/pnpm", "pnpm"),
+    (f"{HOME}/go/bin", "go"),
+]
+
+
+def die(msg, code=2):
+    print(f"pkg-doctor: {msg}", file=sys.stderr)
+    sys.exit(code)
+
+
+def parse_groups(text):
+    """metapac group format, long form or short form."""
+    found, backend = {}, None
+    for line in text.splitlines():
+        m = re.match(r"^(\w+)\s*=\s*\{", line)
+        if m:
+            backend = m.group(1)
+            found.setdefault(backend, set())
+            continue
+        if backend is None:
+            continue
+        m = re.search(r'name\s*=\s*"([^"]+)"', line) or re.match(r'\s*"([^"]+)"', line)
+        if m:
+            found[backend].add(m.group(1))
+    return found
+
+
+def dpkg_owned():
+    """Every path dpkg knows about. One pass over its file lists is far
+    cheaper than `dpkg -S` per binary."""
+    owned = set()
+    for f in glob.glob("/var/lib/dpkg/info/*.list"):
+        try:
+            with open(f, errors="replace") as fh:
+                owned.update(line.strip() for line in fh)
+        except OSError:
+            continue
+    return owned
+
+
+def classify(path, owned):
+    """Who installed this binary, or None if nothing did.
+
+    Checks the resolved target as well as the path itself. Debian's
+    update-alternatives creates symlinks at install time that are not in any
+    package's file list - /usr/bin/awk, /usr/bin/cc, /usr/bin/editor - so
+    matching only the literal path reports most of /usr/bin as unowned.
+    Wrapper symlinks into /opt behave the same way: apt's 1password package
+    owns /opt/1Password/1password, not the /usr/bin/1password pointing at it.
+    """
+    real = os.path.realpath(path)
+    # On a usrmerge system dpkg still records the pre-merge path: the file is
+    # at /usr/bin/zsh but the package lists /bin/zsh. Check both spellings.
+    candidates = []
+    for c in (path, real):
+        candidates.append(c)
+        if c.startswith(("/usr/bin/", "/usr/sbin/", "/usr/lib/")):
+            candidates.append(c.replace("/usr", "", 1))
+    for candidate in candidates:
+        for prefix, who in ROOTS:
+            if candidate.startswith(prefix):
+                return who
+        if candidate in owned:
+            return "apt"
+    return None
+
+
+def path_binaries():
+    """Executables on PATH, first occurrence winning, as PATH itself resolves."""
+    seen = {}
+    for d in os.environ.get("PATH", "").split(os.pathsep):
+        if not d or not os.path.isdir(d):
+            continue
+        try:
+            entries = os.listdir(d)
+        except OSError:
+            continue
+        for name in entries:
+            if name in seen:
+                continue
+            full = os.path.join(d, name)
+            if os.path.isfile(full) and os.access(full, os.X_OK):
+                seen[name] = full
+    return seen
+
+
+def main():
+    if not os.path.exists(GROUPS):
+        die(f"no generated group file at {GROUPS}; run `chezmoi apply` first")
+
+    declared = {}
+    for backend, names in parse_groups(open(GROUPS).read()).items():
+        for n in names:
+            declared[n] = backend
+
+    binaries = {}
+    if os.path.exists(BINARIES):
+        try:
+            binaries = json.load(open(BINARIES))
+        except (json.JSONDecodeError, OSError):
+            pass
+    # binary name -> tool name, for spotting a shadowed declaration
+    bin_to_tool = {v: k for k, v in binaries.items()}
+
+    findings = 0
+
+    # ---- CONFLICTS ----------------------------------------------------
+    conflicts = []
+    if shutil.which("metapac"):
+        proc = subprocess.run(["metapac", "unmanaged"], capture_output=True, text=True)
+        if proc.returncode != 0:
+            err = proc.stderr.strip().splitlines()
+            print("could not run `metapac unmanaged`:", file=sys.stderr)
+            for line in err[:4]:
+                print(f"  {line}", file=sys.stderr)
+            print("  (skipping the conflict check)\n", file=sys.stderr)
+        else:
+            installed = parse_groups(proc.stdout)
+            for name, backend in sorted(declared.items()):
+                for other, names in installed.items():
+                    if other != backend and name in names:
+                        conflicts.append((name, backend, other))
+
+    if conflicts:
+        findings += len(conflicts)
+        w = max(len(c[0]) for c in conflicts)
+        print("CONFLICTS — installed by more than one package manager")
+        print("PATH order decides which one you actually get.\n")
+        for name, backend, other in conflicts:
+            print(f"  {name:<{w}}  declared via {backend}, also installed via {other}")
+            which = shutil.which(binaries.get(name, name))
+            if which:
+                print(f"  {'':<{w}}  currently resolves to {which}")
+        print()
+
+    # ---- UNOWNED ------------------------------------------------------
+    owned = dpkg_owned()
+    unowned = []
+    for name, full in sorted(path_binaries().items()):
+        if classify(full, owned) is None:
+            unowned.append((name, full))
+
+    if unowned:
+        findings += len(unowned)
+        w = max(len(u[1]) for u in unowned)
+        print("UNOWNED — on PATH, claimed by no package manager")
+        print("Installed by hand or by an upstream script, so nothing will")
+        print("update, audit or remove them.\n")
+        for name, full in unowned:
+            tool = bin_to_tool.get(name, name if name in declared else None)
+            note = ""
+            if tool and tool in declared:
+                note = f"  <- shadows {tool}, declared via {declared[tool]}"
+            print(f"  {full:<{w}}{note}")
+        print()
+
+    # ---- MISSING ------------------------------------------------------
+    missing = []
+    for tool, backend in sorted(declared.items()):
+        if not shutil.which(binaries.get(tool, tool)):
+            missing.append((tool, backend))
+
+    if missing:
+        findings += len(missing)
+        w = max(len(m[0]) for m in missing)
+        print("MISSING — declared in the inventory but not on PATH")
+        print("`metapac sync` installs these.\n")
+        for tool, backend in missing:
+            print(f"  {tool:<{w}}  via {backend}")
+        print()
+
+    if not findings:
+        print(f"Clean. {len(declared)} tools declared, all present, "
+              f"none duplicated, nothing unowned on PATH.")
+        return 0
+
+    print("Paths are resolved against this script's PATH. An interactive shell")
+    print("with mise activated may resolve differently, which is the point:")
+    print("more than one install means the answer depends on who is asking.")
+    return 1
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(130)

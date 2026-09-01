@@ -280,7 +280,11 @@ packages:
 
     metapac:
       status: active
-      note: "installs everything else here; bootstrapped by cargo"
+      note: >
+        installs everything else here. cargo-only and therefore the one thing
+        keeping rust on the bootstrap critical path: upstream publishes no
+        release binaries, so mise cannot fetch it and neither can binstall.
+        See KNOWN_ISSUES.md.
       providers:
         cargo: { name: metapac, options: { locked: true } }
 

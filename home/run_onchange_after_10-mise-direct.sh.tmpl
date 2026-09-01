@@ -1,0 +1,32 @@
+#!/bin/sh
+# Install the tools metapac cannot express.
+#
+# metapac's mise backend validates every name against `mise search`
+# (src/backends/mise.rs:43), which lists registry tools only. A `npm:` or
+# `github:` name fails that check and aborts metapac's entire run, taking every
+# other backend with it. Those tools are marked `status: mise-direct` in the
+# inventory, excluded from the generated metapac groups, and installed here
+# instead - directly, by mise, which has no such restriction.
+#
+# ~/.config/mise/config.toml is deliberately not managed by chezmoi: metapac
+# and mise both write to it, so it is generated state rather than a dotfile.
+# This script is what keeps the mise-direct entries in it reproducible.
+#
+# Runs before 20-metapac-sync. Re-runs whenever the list below changes.
+{{ range $name, $tool := .packages.tools -}}
+{{- if eq $tool.status "mise-direct" }}
+#   {{ $name }} -> {{ (index $tool.providers "mise").name }}
+{{- end }}
+{{- end }}
+
+set -eu
+
+if ! command -v mise >/dev/null 2>&1; then
+    echo "mise not installed; skipping mise-direct tools" >&2
+    exit 0
+fi
+{{ range $name, $tool := .packages.tools }}
+{{- if eq $tool.status "mise-direct" }}
+mise use --global --quiet "{{ (index $tool.providers "mise").name }}@latest"
+{{- end }}
+{{- end }}

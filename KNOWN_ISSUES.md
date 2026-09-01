@@ -98,6 +98,56 @@ terminal it runs `metapac sync` and lets you confirm; without one it reports and
 exits 0. Unattended `sudo apt install` during a `chezmoi apply` on a new machine
 is not an acceptable default. `METAPAC_AUTOSYNC=1` opts in.
 
+### metapac rejects any mise name that is not in the registry
+
+metapac's mise backend validates every package name against
+`mise search --no-headers --quiet` (`src/backends/mise.rs:43`), which lists
+**registry tools only**. A prefixed name — `npm:prettier`,
+`github:can1357/oh-my-pi`, `aqua:sharkdp/bat` — is not in that list, fails
+validation, and **aborts metapac's entire run**, taking every other backend
+with it.
+
+```
+$ mise search 'github:Keats/kickstart'
+mise ERROR tool github:Keats/kickstart not found in registry
+```
+
+This is easy to walk into: mise itself installs such names happily, so the
+inventory looks correct and only metapac objects.
+
+**Workaround:** `status: mise-direct` in the inventory. Those tools are excluded
+from the generated metapac groups and installed by
+`run_onchange_after_10-mise-direct.sh.tmpl` instead, which calls
+`mise use --global` directly. `metapac unmanaged` reports them as undeclared,
+which is correct rather than a defect.
+
+Currently mise-direct: `markdownlint-cli`, `oh-my-pi`, `prettier`.
+
+**Consequence for bootstrap:** it also rules out installing metapac itself via
+mise's `github:` backend, which would otherwise take rust off the bootstrap
+path. See below.
+
+### metapac publishes no release binaries
+
+Its latest release has zero assets and the repository has only `ci.yml`, no
+release workflow. So metapac cannot be installed by mise's `github:` backend,
+by `cargo-binstall`, or by any brew formula pointing at a prebuilt binary — it
+must be compiled.
+
+```
+$ mise install 'ubi:ripytide/metapac@0.10.1'
+mise ERROR could not find a release asset after filtering for valid extensions
+```
+
+**Consequence:** rust and cargo are on the bootstrap critical path for exactly
+one package. `cargo` installs metapac and nothing else. kickstart, by contrast,
+ships binaries for five platforms.
+
+**What would fix it upstream:** a release workflow. That single change would let
+mise fetch metapac directly and collapse two bootstrap steps into one. It is a
+better contribution than a personal brew tap, which would help only brew users
+and still need someone to maintain it.
+
 ### metapac cannot pin versions on most backends
 
 Pinning exists only where a backend's `options` happen to support it: `mise`
@@ -115,39 +165,54 @@ package manager late. Of 41 resolved tools here, 23 come from mise.
 never cross-references that against what you declared under a *different*
 backend, so the interesting case is invisible.
 
-**Workaround:** `~/bin/pkg-conflicts` does the cross-reference. See below for
-what it currently reports.
+**Workaround:** `~/bin/pkg-doctor` does the cross-reference, and also reports
+binaries owned by no manager at all and inventory entries that are not
+installed. See below.
 
 ---
 
 ## This machine
 
-### Three tools are installed twice
+### Four tools are installed twice
 
 ```
-1password    declared via snap, also installed via apt  -> /usr/bin/1password
-gh           declared via mise, also installed via apt  -> /usr/bin/gh
-ripgrep      declared via mise, also installed via apt  -> /usr/bin/rg
+1password    declared via snap, also installed via apt   -> /usr/bin/1password
+chezmoi      declared via mise, also installed via snap  -> ~/bin/chezmoi
+gh           declared via mise, also installed via apt   -> /usr/bin/gh
+ripgrep      declared via mise, also installed via apt   -> mise's copy wins
 ```
 
-All three currently resolve to the **apt** copy, so the mise versions declared
-in the inventory are shadowed. Which one you get depends on `PATH` order and
-nothing else.
+Which one you get depends on `PATH` order and nothing else, and the answer
+differs between an interactive shell and a script: `ripgrep` resolves to mise
+interactively but to `/usr/bin/rg` from a non-interactive PATH.
 
-Run `pkg-conflicts` for the current list. Unresolved deliberately: removing the
+Run `pkg-doctor` for the current list. Unresolved deliberately: removing the
 apt `1password` may take the desktop application and its SSH signing agent with
 it, and `.gitconfig` depends on `/opt/1Password/op-ssh-sign` for commit signing.
 Check that before running `apt remove`.
 
-### starship is owned by no package manager
+### Thirteen binaries on PATH are owned by no package manager
 
-It lives at `/usr/local/bin/starship`, installed by the upstream `curl | sh`
-script. The inventory declares it under mise, so once `metapac sync` runs there
-will be two starships and the `/usr/local/bin` one will likely win.
+`pkg-doctor`'s UNOWNED section finds them by asking, for every executable on
+PATH, whether any manager claims it. Nothing updates, audits or removes these.
 
-`pkg-conflicts` **cannot see this**: it compares package managers against each
-other, and a hand-installed binary is in none of them. Same blind spot applies
-to anything else installed by an upstream script.
+Two actively shadow a declared tool:
+
+- `/usr/local/bin/node` is **v16.17.1, from October 2022**, and wins over the
+  mise-declared node 24.18.0 in an interactive shell. It arrived with a
+  hand-installed Node toolchain — `npm`, `npx`, `n`, `corepack`, `yarn`,
+  `yarnpkg` are all unowned alongside it.
+- `/usr/local/bin/starship` came from the upstream `curl | sh`. The inventory
+  declares starship under mise, so after `metapac sync` there will be two.
+
+Also unowned: `alacritty`, `anki`, `zutty`, a stray
+`libfprint_delete_device_prints.py`, and `/usr/bin/leftwm-theme`, which is a
+root-owned symlink into `~/src/github/leftwm/leftwm-theme/target/release/` —
+a build directory, so it breaks on `cargo clean`.
+
+None are removed automatically: `/usr/local` is deliberately outside every
+package manager's remit, and deleting things there is a decision, not a
+cleanup.
 
 ### The inventory is Ubuntu- and macOS-shaped
 
@@ -207,6 +272,17 @@ chezmoi: .config: inconsistent state
 
 One target directory, one source attribute. Everything under `~/.config` uses
 `dot_config`.
+
+### ~/.config/mise/config.toml is not managed by chezmoi
+
+It looks like a dotfile and it is not. Both metapac (via `mise use --global`)
+and mise itself write to it, so chezmoi managing it would mean every
+`metapac sync` created drift that the next `chezmoi apply` reverted — the tools
+would be installed and then silently un-declared.
+
+It is generated state, like `~/.config/metapac/`. The inventory is the source of
+truth; `run_onchange_after_10-mise-direct.sh.tmpl` reproduces the handful of
+entries metapac cannot install.
 
 ### The sync hook hashes parsed data, not file bytes
 

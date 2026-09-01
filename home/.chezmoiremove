@@ -1,0 +1,3 @@
+# Renamed to pkg-doctor; remove the old name on machines that still have it.
+.local/bin/pkg-conflicts
+bin/pkg-conflicts
