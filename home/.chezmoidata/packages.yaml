@@ -7,8 +7,9 @@
 #   packages.yaml  ->  chezmoi template  ->  ~/.config/metapac/  ->  metapac sync
 #   (this file)        (resolution)          (generated)            (execution)
 #
-# So edit this file and nothing else. ~/.config/metapac/ is generated output and
-# any change there is overwritten on the next `chezmoi apply`.
+# Edit tool definitions and task groups here. Select groups per machine with
+# data.machine.packageGroups in the local chezmoi config, not in this file.
+# ~/.config/metapac/ is generated output, overwritten by `chezmoi apply`.
 #
 # Backend ids are metapac's own, which is why the Arch backend is `arch` and not
 # `pacman`. See https://github.com/ripytide/metapac.
@@ -25,6 +26,20 @@ packages:
     extracted_from: highb/.bhell
     extracted_on: 2026-08-30
     executor: metapac
+
+  # Task groups are additive; a shared tool is requested only once. Include
+  # required runtimes explicitly (for example, writing includes node for npm).
+  # Omitted machine.packageGroups preserves the full inventory; [] selects none.
+  # packageExcludes wins over membership. No group is implicitly required.
+  groups:
+    core: [age, chezmoi, curl, file, git, jq, magic-wormhole, metapac, procps, pwgen, ripgrep, yq]
+    shell: [atuin, bat, direnv, eza, fd, fzf, navi, starship, zoxide]
+    development: [build-essential, direnv, exercism, gh, git, httpie, kickstart, node, ruby, rust, vim, xh]
+    cloud: [awscli, google-cloud-cli]
+    kubernetes: [helm, k3d, kubectl, kubie, kustomize]
+    writing: [hugo, markdownlint-cli, node, prettier, zola]
+    desktop: [1password, code, discord, ghostty, slack]
+    ai: [oh-my-pi]
 
   # Which backend wins, most preferred first. This is the layer metapac does
   # not have: it treats every enabled backend independently, so without this a

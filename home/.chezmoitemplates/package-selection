@@ -1,0 +1,50 @@
+{{- /* JSON: groups (sorted unique names), groupsExplicit (key present), and
+       tools (selected logical-name -> original inventory entry, exclusions
+       removed). Status is retained for metapac and mise-direct consumers. */ -}}
+{{- $groups := get .packages "groups" -}}
+{{- if not (kindIs "map" $groups) -}}
+{{-   fail "packages.groups must be a map of group names to lists of logical tool names" -}}
+{{- end -}}
+{{- range $group, $members := $groups -}}
+{{-   if not (kindIs "slice" $members) -}}
+{{-     fail (printf "packages.groups.%s must be a list of logical tool names" $group) -}}
+{{-   end -}}
+{{-   range $member := $members -}}
+{{-     if not (kindIs "string" $member) -}}
+{{-       fail (printf "packages.groups.%s must contain only logical tool names (strings)" $group) -}}
+{{-     end -}}
+{{-     if not (hasKey $.packages.tools $member) -}}
+{{-       fail (printf "packages.groups.%s contains unknown tool %q" $group $member) -}}
+{{-     end -}}
+{{-   end -}}
+{{- end -}}
+{{- $machine := get . "machine" | default (dict) -}}
+{{- $explicit := hasKey $machine "packageGroups" -}}
+{{- $selected := list -}}
+{{- if $groups -}}{{- $selected = keys $groups | sortAlpha -}}{{- end -}}
+{{- if $explicit -}}
+{{-   $requested := get $machine "packageGroups" -}}
+{{-   if not (kindIs "slice" $requested) -}}
+{{-     fail "machine.packageGroups must be a list of group names; omit it for all groups or use [] for none" -}}
+{{-   end -}}
+{{-   range $group := $requested -}}
+{{-     if not (kindIs "string" $group) -}}
+{{-       fail "machine.packageGroups must contain only group names (strings)" -}}
+{{-     end -}}
+{{-     if not (hasKey $groups $group) -}}
+{{-       fail (printf "machine.packageGroups contains unknown group %q; available groups: %s" $group (keys $groups | sortAlpha | join ", ")) -}}
+{{-     end -}}
+{{-   end -}}
+{{-   $selected = list -}}
+{{-   if $requested -}}{{- $selected = $requested | uniq | sortAlpha -}}{{- end -}}
+{{- end -}}
+{{- $excludes := get $machine "packageExcludes" | default (list) -}}
+{{- $tools := dict -}}
+{{- range $group := $selected -}}
+{{-   range $name := get $groups $group -}}
+{{-     if not (has $name $excludes) -}}
+{{-       $_ := set $tools $name (index $.packages.tools $name) -}}
+{{-     end -}}
+{{-   end -}}
+{{- end -}}
+{{- dict "groups" $selected "groupsExplicit" $explicit "tools" $tools | toJson -}}

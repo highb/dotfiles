@@ -1,21 +1,11 @@
 {{- /* tool -> the binary it actually installs, for the backend it resolved to.
        apt's bat is batcat and mise's bat is bat, so this is a property of the
        pair, not of the tool. Consumed by ~/bin/pkg-doctor. */ -}}
-{{- $platform := includeTemplate "metapac-platform" . -}}
-{{- $enabled := includeTemplate "metapac-backends" . | trim | splitList " " -}}
+{{- $resolution := includeTemplate "package-resolution" . | fromJson -}}
 {{- $map := dict -}}
-{{- range $name, $tool := .packages.tools -}}
-{{-   if eq $tool.status "active" -}}
-{{-     $prefer := get $tool "prefer" | default (list) -}}
-{{-     $provs := get $tool "providers" | default (dict) -}}
-{{-     $chosen := "" -}}
-{{-     range $b := concat $prefer $enabled -}}
-{{-       if and (eq $chosen "") (has $b $enabled) (hasKey $provs $b) -}}{{- $chosen = $b -}}{{- end -}}
-{{-     end -}}
-{{-     if $chosen -}}
-{{-       $entry := index $provs $chosen -}}
-{{-       $_ := set $map $name (get $entry "binary" | default $name) -}}
-{{-     end -}}
+{{- range $backend, $items := $resolution.assigned -}}
+{{-   range $item := $items -}}
+{{-     $_ := set $map $item.tool (get $item.spec "binary" | default $item.tool) -}}
 {{-   end -}}
 {{- end -}}
 {{ $map | toPrettyJson }}

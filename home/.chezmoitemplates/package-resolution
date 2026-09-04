@@ -1,0 +1,36 @@
+{{- /* JSON: selection (package-selection result), platform, enabled (ordered
+       backend names), assigned (backend -> [{tool, spec}]), and unresolved
+       (logical names). Only active tools resolve; overrides are authoritative. */ -}}
+{{- $selection := includeTemplate "package-selection" . | fromJson -}}
+{{- $platform := includeTemplate "metapac-platform" . -}}
+{{- $backends := includeTemplate "metapac-backends" . | trim -}}
+{{- $enabled := list -}}
+{{- if $backends -}}{{- $enabled = splitList " " $backends -}}{{- end -}}
+{{- $machine := get . "machine" | default (dict) -}}
+{{- $providers := get $machine "packageProviders" | default (dict) -}}
+{{- $assigned := dict -}}
+{{- $unresolved := list -}}
+{{- range $name, $tool := $selection.tools -}}
+{{-   if eq $tool.status "active" -}}
+{{-     $prefer := get $tool "prefer" | default (list) -}}
+{{-     $provs := get $tool "providers" | default (dict) -}}
+{{-     $candidates := concat $prefer $enabled -}}
+{{-     if hasKey $providers $name -}}
+{{-       $candidates = list (get $providers $name) -}}
+{{-     end -}}
+{{-     $chosen := "" -}}
+{{-     range $backend := $candidates -}}
+{{-       if and (eq $chosen "") (has $backend $enabled) (hasKey $provs $backend) -}}
+{{-         $chosen = $backend -}}
+{{-       end -}}
+{{-     end -}}
+{{-     if eq $chosen "" -}}
+{{-       $unresolved = append $unresolved $name -}}
+{{-     else -}}
+{{-       $entry := index $provs $chosen -}}
+{{-       $current := get $assigned $chosen | default (list) -}}
+{{-       $_ := set $assigned $chosen (append $current (dict "tool" $name "spec" $entry)) -}}
+{{-     end -}}
+{{-   end -}}
+{{- end -}}
+{{- dict "selection" $selection "platform" $platform "enabled" $enabled "assigned" $assigned "unresolved" $unresolved | toJson -}}

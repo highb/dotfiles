@@ -1,7 +1,7 @@
 #!/bin/sh
 # Bootstrap a machine from nothing to a working environment.
 #
-#   sh -c "$(curl -fsSL https://raw.githubusercontent.com/highb/dotfiles/main/bootstrap.sh)"
+#   DOTFILES_INSTALL_PACKAGES=1 sh -c "$(curl -fsSL https://raw.githubusercontent.com/highb/dotfiles/main/bootstrap.sh)"
 #
 # Idempotent: every step checks before acting, so re-running it is a no-op and
 # a half-finished run can simply be repeated.
@@ -17,6 +17,11 @@ ok()    { printf '\033[1;32m  ok\033[0m %s\n' "$*"; }
 warn()  { printf '\033[1;33m  !!\033[0m %s\n' "$*" >&2; }
 die()   { printf '\033[1;31merror\033[0m %s\n' "$*" >&2; exit 1; }
 have()  { command -v "$1" >/dev/null 2>&1; }
+
+if [ "${DOTFILES_INSTALL_PACKAGES:-}" != "1" ]; then
+    die "bootstrap requires explicit installation consent. Review bootstrap.sh, then run:
+  DOTFILES_INSTALL_PACKAGES=1 sh bootstrap.sh"
+fi
 
 # --- 0. prerequisites ------------------------------------------------------
 # curl and git only. Everything else is installed by the tools below.
@@ -98,15 +103,16 @@ else
 fi
 
 # --- 6. packages -----------------------------------------------------------
-# Not run automatically. metapac sync has no dry-run and installs system
-# packages under sudo; that is a decision, not a bootstrap step.
+# Applying without consent first records the skipped hooks, so the opted-in
+# apply also retries hooks whose prerequisites were installed during bootstrap.
 info "bootstrap complete"
 cat <<'NEXT'
 
-  Next, review and install the declared packages:
+  Review the declared packages, then apply with installation consent:
 
-      metapac --config-dir "${XDG_CONFIG_HOME:-$HOME/.config}/metapac" sync
-                            # shows the plan and asks before installing
+      chezmoi apply
+      DOTFILES_INSTALL_PACKAGES=1 chezmoi apply
+                            # machine.manualProvisioning still disables hooks
       pkg-doctor            # duplicates, unowned binaries, what is missing
 
   Then open a new shell so the mise activation in ~/.config/shell takes effect.

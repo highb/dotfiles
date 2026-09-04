@@ -12,23 +12,33 @@
 # and mise both write to it, so it is generated state rather than a dotfile.
 # This script is what keeps the mise-direct entries in it reproducible.
 #
-# Runs before 20-metapac-sync. Re-runs whenever the list below changes.
-{{- $machine := get . "machine" | default (dict) }}
-{{- $excludes := get $machine "packageExcludes" | default (list) }}
-{{ range $name, $tool := .packages.tools -}}
-{{- if and (eq $tool.status "mise-direct") (not (has $name $excludes)) }}
+# Runs before 20-metapac-sync. Re-runs when the list or consent changes.
+# install consent: {{ eq (env "DOTFILES_INSTALL_PACKAGES") "1" }}
+{{- $selection := includeTemplate "package-selection" . | fromJson }}
+# selected package groups: {{ $selection.groups | join ", " | default "(none)" }}
+{{ range $name, $tool := $selection.tools -}}
+{{- if eq $tool.status "mise-direct" }}
 #   {{ $name }} -> {{ (index $tool.providers "mise").name }}
 {{- end }}
 {{- end }}
 
 set -eu
 
+{{ if not $selection.tools -}}
+exit 0 # No selected packages.
+{{ end -}}
+if [ "${DOTFILES_INSTALL_PACKAGES:-}" != "1" ]; then
+    echo "Skipping mise-direct installs. Review packages, then run:" >&2
+    echo "  DOTFILES_INSTALL_PACKAGES=1 chezmoi apply" >&2
+    exit 0
+fi
+
 if ! command -v mise >/dev/null 2>&1; then
     echo "mise not installed; skipping mise-direct tools" >&2
     exit 0
 fi
-{{ range $name, $tool := .packages.tools }}
-{{- if and (eq $tool.status "mise-direct") (not (has $name $excludes)) }}
+{{ range $name, $tool := $selection.tools }}
+{{- if eq $tool.status "mise-direct" }}
 mise use --global --quiet "{{ (index $tool.providers "mise").name }}@latest"
 {{- end }}
 {{- end }}

@@ -17,6 +17,45 @@
 .zsh_histfile
 .zsh_histfile.*
 
+# Deploy complete config bundles for the selected tasks. Ignoring a target
+# stops managing it; it does not remove an existing copy from this machine.
+{{- $selection := includeTemplate "package-selection" . | fromJson }}
+{{- $groups := $selection.groups }}
+{{ if not (has "shell" $groups) }}
+.bashrc
+.zshrc
+.profile
+.zshenv
+.config/shell
+.config/shell/**
+.config/starship.toml
+{{ end }}
+{{ if not (or (has "core" $groups) (has "development" $groups)) }}
+.gitconfig
+.config/git
+.config/git/**
+{{ end }}
+{{ if not (has "development" $groups) }}
+.config/nvim
+.config/nvim/**
+bin/all_pull.sh
+bin/gh_clone_all.sh
+{{ end }}
+{{ if not (or (has "development" $groups) (has "writing" $groups)) }}
+bin/scaffold
+.local/share/scaffold
+.local/share/scaffold/**
+{{ end }}
+{{ if not (has "desktop" $groups) }}
+.config/ghostty
+.config/ghostty/**
+{{ end }}
+# These helpers require Linux desktop services, not merely a shell.
+{{ if or (not (has "desktop" $groups)) (ne .chezmoi.os "linux") }}
+bin/audio_fix.sh
+bin/gnome_toggle_dark_mode.sh
+{{ end }}
+
 # This machine provisions packages explicitly, not during dotfile updates.
 {{- $machine := get . "machine" | default dict }}
 {{ if get $machine "manualProvisioning" }}

@@ -7,20 +7,28 @@
 # reformatting and comment-only edits do not trigger a resync.
 #
 # inventory sha256: {{ .packages | toJson | sha256sum }}
+# install consent: {{ eq (env "DOTFILES_INSTALL_PACKAGES") "1" }}
+{{- $selection := includeTemplate "package-selection" . | fromJson }}
+# selected package groups: {{ $selection.groups | join ", " | default "(none)" }}
 {{- $machine := get . "machine" | default (dict) }}
 {{- $providers := get $machine "packageProviders" | default (dict) }}
 {{- $excludes := get $machine "packageExcludes" | default (list) }}
-{{- if or $providers $excludes }}
-# machine package policy sha256: {{ dict "providers" $providers "excludes" $excludes | toJson | sha256sum }}
-{{- end }}
+# machine package policy sha256: {{ dict "groups" $selection.groups "groupsExplicit" $selection.groupsExplicit "providers" $providers "excludes" $excludes | toJson | sha256sum }}
 #
-# `metapac sync` has no dry-run and installs system packages, some of them
-# under sudo. It is therefore NOT run unattended: with a terminal it prompts,
-# and without one it reports and exits 0 rather than installing things behind
-# your back during a `chezmoi apply` on a new machine. Set METAPAC_AUTOSYNC=1
-# to opt into unattended installs.
+# `metapac sync` has no dry-run and installs system packages, some under sudo.
+# Only DOTFILES_INSTALL_PACKAGES=1 authorizes installation, with or without a
+# terminal. Consent is rendered above so a skipped apply can be opted into later.
 
 set -eu
+
+{{ if not $selection.tools -}}
+exit 0 # No selected packages.
+{{ end -}}
+if [ "${DOTFILES_INSTALL_PACKAGES:-}" != "1" ]; then
+    echo "Skipping package sync. Review packages, then run:" >&2
+    echo "  DOTFILES_INSTALL_PACKAGES=1 chezmoi apply" >&2
+    exit 0
+fi
 
 if ! command -v metapac >/dev/null 2>&1; then
     echo "metapac not installed; skipping package sync" >&2
@@ -28,14 +36,4 @@ if ! command -v metapac >/dev/null 2>&1; then
     exit 0
 fi
 
-if [ "${METAPAC_AUTOSYNC:-0}" = "1" ]; then
-    exec metapac --config-dir "${XDG_CONFIG_HOME:-$HOME/.config}/metapac" sync --no-confirm
-fi
-
-if [ -t 0 ] && [ -t 1 ]; then
-    exec metapac --config-dir "${XDG_CONFIG_HOME:-$HOME/.config}/metapac" sync
-fi
-
-echo "Package inventory changed. Review and apply with:" >&2
-echo '  metapac --config-dir "${XDG_CONFIG_HOME:-$HOME/.config}/metapac" sync' >&2
-exit 0
+exec metapac --config-dir "${XDG_CONFIG_HOME:-$HOME/.config}/metapac" sync --no-confirm

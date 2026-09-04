@@ -92,11 +92,11 @@ Not bugs. Design gaps that shape how this repository is put together.
 no `plan`, no machine-readable diff. You can see what it would do only by
 running it and declining the prompt, which is not scriptable.
 
-**Consequence:** the chezmoi hook
-(`home/run_onchange_after_20-metapac-sync.sh.tmpl`) is TTY-gated. With a
-terminal it runs `metapac sync` and lets you confirm; without one it reports and
-exits 0. Unattended `sudo apt install` during a `chezmoi apply` on a new machine
-is not an acceptable default. `METAPAC_AUTOSYNC=1` opts in.
+**Consequence:** both package hooks require the per-command
+`DOTFILES_INSTALL_PACKAGES=1` opt-in, even with a terminal. Ordinary apply/update
+operations report and skip installation. Opt-in authorizes `metapac sync
+--no-confirm`; review the generated declarations first. `manualProvisioning`
+remains a hard disable for both hooks, regardless of the flag.
 
 ### metapac rejects any mise name that is not in the registry
 
