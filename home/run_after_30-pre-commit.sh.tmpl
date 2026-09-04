@@ -1,0 +1,15 @@
+#!/bin/sh
+# Git does not transfer hooks when cloning. Activate the repository's local
+# pre-commit gate after package provisioning; this installs no tool dependencies.
+set -eu
+
+cd '{{ .chezmoi.workingTree | replace "'" "'\\''" }}'
+[ -f .pre-commit-config.yaml ] || exit 0
+
+if ! command -v pre-commit >/dev/null 2>&1; then
+    echo "Commit protection not installed: pre-commit is missing." >&2
+    echo "Install the managed pre-commit/trufflehog tools, then run chezmoi apply." >&2
+    exit 0
+fi
+
+pre-commit install --hook-type pre-commit

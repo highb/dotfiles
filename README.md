@@ -132,9 +132,9 @@ For TOML, add `packageGroups = ["core", "shell"]` under `[data.machine]`.
 
 | Group | Packages |
 | --- | --- |
-| `core` | age, chezmoi, curl, file, git, jq, magic-wormhole, metapac, procps, pwgen, ripgrep, yq |
+| `core` | age, chezmoi, curl, file, git, jq, magic-wormhole, metapac, pre-commit, procps, pwgen, ripgrep, trufflehog, yq |
 | `shell` | atuin, bat, direnv, eza, fd, fzf, navi, starship, zoxide |
-| `development` | build-essential, direnv, exercism, gh, git, httpie, kickstart, node, ruby, rust, vim, xh |
+| `development` | build-essential, direnv, exercism, gh, git, httpie, kickstart, node, pre-commit, ruby, rust, trufflehog, vim, xh |
 | `cloud` | awscli, google-cloud-cli |
 | `kubernetes` | helm, k3d, kubectl, kubie, kustomize |
 | `writing` | hugo, markdownlint-cli, node, prettier, zola |
@@ -271,6 +271,9 @@ metapac sync                                       execution
 - `home/run_onchange_after_20-metapac-sync.sh.tmpl` — hashes the parsed
   inventory, machine package policy, and per-command install consent. Neither
   it nor the direct mise hook installs without `DOTFILES_INSTALL_PACKAGES=1`.
+- `home/run_after_30-pre-commit.sh.tmpl` — activates the repository's Git hook
+  after provisioning when pre-commit is available. It installs no packages and
+  is not disabled by `manualProvisioning`.
 - `docs/provisioning-gap.md` — why this shape.
 
 - `KNOWN_ISSUES.md` — upstream bugs, tool limitations, and the gotchas that
@@ -279,18 +282,54 @@ metapac sync                                       execution
 Remaining gaps, and what is left of the tool that was going to be written, are
 in `TODO.md` in [.bhell](https://github.com/highb/.bhell).
 
-### Deployment and provisioning checks
+### Commit protection
 
-Requires Python 3.11+ and `chezmoi` on `PATH`:
+`pre-commit` and TruffleHog are managed tools in both `core` and `development`,
+not one-off bootstrap downloads. Homebrew supplies them on this laptop;
+`packageProviders` can select other declared backends. The hook requires
+pre-commit 4.4+ and a TruffleHog version supporting `--fail-on-scan-errors`.
+
+After those tools are available, `chezmoi apply` activates the hook in this
+repository. You can also run this directly from its working tree:
 
 ```sh
-python3 -m unittest discover -s tests -v
+pre-commit install
+pre-commit run --all-files
 ```
 
-The checks render and apply the real templates in temporary homes and exercise
-hooks and bootstrap against fake package-manager executables. They cover task
-and platform selection, existing-file preservation, and install consent without
-installing or removing real packages.
+Git does not transfer hooks when cloning. A fresh checkout is not protected
+until hook installation succeeds; apply prints a warning if pre-commit is
+missing. An installed hook blocks commits if TruffleHog is missing or fails.
+
+The gate exports regular-file **raw index blobs** to a private temporary
+directory, so it scans what will be committed, not unstaged edits or files
+outside the repository. Symlinks and submodules are not followed. TruffleHog
+runs offline, without credential verification or update checks, and blocks
+unverified findings too. Scanner output is suppressed because even errors can
+contain credential values; inspect flagged staged changes privately.
+
+This is detection, not proof that arbitrary secret text is safe. Keep secrets
+out of tracked files, and do not bypass the hook to commit a finding.
+
+### Deployment and provisioning checks
+
+Requires Python 3.11+, chezmoi, pre-commit, TruffleHog, `/bin/bash`, and zsh:
+
+```sh
+python3 -B -m unittest discover -s tests -v
+```
+
+The checks render and apply real templates in temporary homes, exercise
+provisioning with fake package managers, and start bash/zsh with isolated
+environment, history, and local overrides. Secret-gate tests use synthetic
+markers and offline scanning in disposable Git repositories. No test reads
+workstation credentials or installs dotfile-managed packages.
+
+`.github/workflows/checks.yml` runs the secret gate and test suite on Ubuntu
+24.04 and macOS 15. Actions are pinned by commit; chezmoi and TruffleHog release
+binaries are pinned and SHA256-checked. Runner setup supplies Python, pre-commit,
+and Ubuntu zsh as test prerequisites. Jobs use read-only repository permissions
+and do not persist checkout credentials or receive repository secrets.
 
 ## TODO
 

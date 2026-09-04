@@ -1,6 +1,10 @@
 # ~/.config/shell/interactive.sh - shared interactive setup that is real logic
 # rather than data, and so does not belong in shell.yaml.
 
+if [ "${DOTFILES_SKIP_LOCAL_INTEGRATIONS:-0}" = "1" ]; then
+    return 0
+fi
+
 # Colourise ls and friends.
 if command -v dircolors >/dev/null 2>&1; then
     if [ -r "${HOME}/.dircolors" ]; then

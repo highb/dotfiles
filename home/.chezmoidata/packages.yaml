@@ -32,9 +32,9 @@ packages:
   # Omitted machine.packageGroups preserves the full inventory; [] selects none.
   # packageExcludes wins over membership. No group is implicitly required.
   groups:
-    core: [age, chezmoi, curl, file, git, jq, magic-wormhole, metapac, procps, pwgen, ripgrep, yq]
+    core: [age, chezmoi, curl, file, git, jq, magic-wormhole, metapac, pre-commit, procps, pwgen, ripgrep, trufflehog, yq]
     shell: [atuin, bat, direnv, eza, fd, fzf, navi, starship, zoxide]
-    development: [build-essential, direnv, exercism, gh, git, httpie, kickstart, node, ruby, rust, vim, xh]
+    development: [build-essential, direnv, exercism, gh, git, httpie, kickstart, node, pre-commit, ruby, rust, trufflehog, vim, xh]
     cloud: [awscli, google-cloud-cli]
     kubernetes: [helm, k3d, kubectl, kubie, kustomize]
     writing: [hugo, markdownlint-cli, node, prettier, zola]
@@ -375,6 +375,13 @@ packages:
       note: "still on disk at ~/.oh-my-zsh, sourced by nothing"
       providers: {}
 
+    pre-commit:
+      status: active
+      note: "installs the chezmoi repository's staged-secret gate; requires 4.4 or newer"
+      providers:
+        brew: { name: pre-commit }
+        uv: { name: pre-commit }
+
     procps:
       status: active
       providers:
@@ -436,6 +443,13 @@ packages:
         mise: { name: starship }
         brew: { name: starship }
         snap: { name: starship }
+
+    trufflehog:
+      status: active
+      note: "offline staged-secret scanning before commits to this repository"
+      providers:
+        mise: { name: trufflehog }
+        brew: { name: trufflehog }
 
     vim:
       status: active

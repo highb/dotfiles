@@ -35,6 +35,7 @@ class DeploymentTest(unittest.TestCase):
             "dot_gitconfig.tmpl", "private_dot_config", "private_dot_local", "bin",
             "run_onchange_after_10-mise-direct.sh.tmpl",
             "run_onchange_after_20-metapac-sync.sh.tmpl",
+            "run_after_30-pre-commit.sh.tmpl",
         ):
             original = SOURCE / entry
             target = self.source / entry
@@ -159,10 +160,33 @@ class DeploymentTest(unittest.TestCase):
     def test_manual_provisioning_excludes_hooks_even_with_install_opt_in(self):
         self.env["DOTFILES_INSTALL_PACKAGES"] = "1"
         self.targets(["writing"], manualProvisioning=True)
-        self.assertEqual(self.command("managed", "--include=scripts").strip(), "")
+        self.assertEqual(
+            set(self.command("managed", "--include=scripts").splitlines()),
+            {"30-pre-commit.sh"},
+        )
         self.targets(["writing"], manualProvisioning=False)
         scripts = set(self.command("managed", "--include=scripts").splitlines())
-        self.assertEqual(scripts, {"10-mise-direct.sh", "20-metapac-sync.sh"})
+        self.assertEqual(scripts, {"10-mise-direct.sh", "20-metapac-sync.sh", "30-pre-commit.sh"})
+
+    def test_apply_activates_hook_in_working_tree_without_package_installs(self):
+        working_tree = self.root / "working tree's repository"
+        working_tree.mkdir()
+        (working_tree / ".pre-commit-config.yaml").write_text("repos: []\n")
+        self.targets([], manualProvisioning=True)
+        self.policy["chezmoi"]["workingTree"] = str(working_tree)
+        (self.root / "bin/sh").symlink_to("/bin/sh")
+        log = self.root / "hook-install.log"
+        self.env["HOOK_INSTALL_LOG"] = str(log)
+        executable = self.root / "bin/pre-commit"
+        executable.write_text(
+            '#!/bin/sh\nprintf "%s\\n" "$PWD" "$@" > "$HOOK_INSTALL_LOG"\n'
+        )
+        executable.chmod(0o700)
+        self.command("apply", "--include=scripts")
+        self.assertEqual(
+            log.read_text().splitlines(),
+            [str(working_tree), "install", "--hook-type", "pre-commit"],
+        )
 
 
 if __name__ == "__main__":

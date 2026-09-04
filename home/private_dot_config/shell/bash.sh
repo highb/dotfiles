@@ -18,15 +18,18 @@ shopt -s cdspell        # forgive small typos in cd arguments
 
 set -o vi               # vi keybindings, matching zsh's `bindkey -v`
 
-# Friendlier `less` for non-text input.
-[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+# Keep optional host integrations out of SSH and isolated shell startup.
+if [ "${DOTFILES_SKIP_LOCAL_INTEGRATIONS:-0}" != "1" ]; then
+    # Friendlier `less` for non-text input.
+    [ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
 
-# Distro-provided completions.
-if ! shopt -oq posix; then
-    if [ -r /usr/share/bash-completion/bash_completion ]; then
-        . /usr/share/bash-completion/bash_completion
-    elif [ -r /etc/bash_completion ]; then
-        . /etc/bash_completion
+    # Distro-provided completions.
+    if ! shopt -oq posix; then
+        if [ -r /usr/share/bash-completion/bash_completion ]; then
+            . /usr/share/bash-completion/bash_completion
+        elif [ -r /etc/bash_completion ]; then
+            . /etc/bash_completion
+        fi
     fi
 fi
 
