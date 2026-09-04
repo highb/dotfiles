@@ -11,7 +11,9 @@ HISTCONTROL=ignoreboth:erasedups
 shopt -s histappend
 
 shopt -s checkwinsize   # keep LINES/COLUMNS correct after every command
-shopt -s globstar       # ** matches across directory boundaries
+if [ "${BASH_VERSINFO[0]}" -ge 4 ]; then
+    shopt -s globstar   # ** matches across directory boundaries (Bash 4+)
+fi
 shopt -s cdspell        # forgive small typos in cd arguments
 
 set -o vi               # vi keybindings, matching zsh's `bindkey -v`

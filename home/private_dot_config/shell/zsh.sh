@@ -4,8 +4,7 @@
 # parts with no bash equivalent, and mirrors bash.sh choice for choice.
 
 # History: large, deduplicated, shared live between concurrent shells.
-# The filename is .zsh_histfile rather than the more usual .zsh_history
-# because that is where this machine's history already lives.
+# Default history pathname; machine-local overrides can choose another file.
 HISTFILE="${HOME}/.zsh_histfile"
 HISTSIZE=1000000
 SAVEHIST=1000000
@@ -16,10 +15,12 @@ setopt autocd extendedglob nomatch
 unsetopt beep notify
 
 # Completion.
-zstyle ':completion:*' completer _expand _complete _ignored
-zstyle ':completion:*' matcher-list 'm:{[:lower:][:upper:]}={[:upper:][:lower:]}'
-zstyle ':completion:*' menu select
-autoload -Uz compinit && compinit
+if [ "${DOTFILES_SKIP_LOCAL_INTEGRATIONS:-0}" != 1 ]; then
+    zstyle ':completion:*' completer _expand _complete _ignored
+    zstyle ':completion:*' matcher-list 'm:{[:lower:][:upper:]}={[:upper:][:lower:]}'
+    zstyle ':completion:*' menu select
+    autoload -Uz compinit && compinit
+fi
 
 bindkey -v              # vi keybindings, matching bash's `set -o vi`
 
@@ -32,5 +33,7 @@ bindkey '^[[B' down-line-or-beginning-search
 
 # Fallback prompt, used only when starship is not installed - tools.sh loads
 # after this file and overrides the prompt when it is.
-autoload -Uz promptinit && promptinit
-prompt walters
+if [ "${DOTFILES_SKIP_LOCAL_INTEGRATIONS:-0}" != 1 ]; then
+    autoload -Uz promptinit && promptinit
+    prompt walters
+fi

@@ -25,8 +25,9 @@ import subprocess
 import sys
 
 HOME = os.path.expanduser("~")
-GROUPS = f"{HOME}/.config/metapac/groups/dotfiles.toml"
-BINARIES = f"{HOME}/.config/metapac/binaries.json"
+CONFIG_DIR = os.path.join(os.environ.get("XDG_CONFIG_HOME") or f"{HOME}/.config", "metapac")
+GROUPS = f"{CONFIG_DIR}/groups/dotfiles.toml"
+BINARIES = f"{CONFIG_DIR}/binaries.json"
 
 # PATH roots whose contents are owned by a known manager. Order matters:
 # the first matching prefix wins, so put specific paths before general ones.
@@ -150,10 +151,13 @@ def main():
     # ---- CONFLICTS ----------------------------------------------------
     conflicts = []
     if shutil.which("metapac"):
-        proc = subprocess.run(["metapac", "unmanaged"], capture_output=True, text=True)
+        proc = subprocess.run(
+            ["metapac", "--config-dir", CONFIG_DIR, "unmanaged"],
+            capture_output=True, text=True,
+        )
         if proc.returncode != 0:
             err = proc.stderr.strip().splitlines()
-            print("could not run `metapac unmanaged`:", file=sys.stderr)
+            print(f"could not run `metapac --config-dir {CONFIG_DIR!r} unmanaged`:", file=sys.stderr)
             for line in err[:4]:
                 print(f"  {line}", file=sys.stderr)
             print("  (skipping the conflict check)\n", file=sys.stderr)
@@ -207,7 +211,7 @@ def main():
         findings += len(missing)
         w = max(len(m[0]) for m in missing)
         print("MISSING — declared in the inventory but not on PATH")
-        print("`metapac sync` installs these.\n")
+        print('`metapac --config-dir "${XDG_CONFIG_HOME:-$HOME/.config}/metapac" sync` installs these.\n')
         for tool, backend in missing:
             print(f"  {tool:<{w}}  via {backend}")
         print()

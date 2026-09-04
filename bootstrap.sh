@@ -105,8 +105,9 @@ cat <<'NEXT'
 
   Next, review and install the declared packages:
 
-      metapac sync         # shows the plan and asks before installing
-      pkg-doctor           # duplicates, unowned binaries, what is missing
+      metapac --config-dir "${XDG_CONFIG_HOME:-$HOME/.config}/metapac" sync
+                            # shows the plan and asks before installing
+      pkg-doctor            # duplicates, unowned binaries, what is missing
 
   Then open a new shell so the mise activation in ~/.config/shell takes effect.
 NEXT

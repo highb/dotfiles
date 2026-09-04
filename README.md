@@ -17,8 +17,8 @@ home/
   dot_zshrc                 thin, sources ~/.config/shell
   dot_profile               login shells: environment only
   dot_zshenv                every zsh: environment only
-  dot_config/shell/         the shared shell layer (see its README)
-  dot_config/               ghostty, mise, nvim
+  private_dot_config/shell/ the shared shell layer (see its README)
+  private_dot_config/       ghostty, git, metapac, nvim, starship
   bin/                      personal scripts
   README.md                 becomes ~/README.md
 ```
@@ -33,7 +33,7 @@ files and differ only in a single shell-specific fragment each.
 Adding an alias is one line of YAML. Adding a POSIX shell is an rc file that
 copies `dot_bashrc` with one word changed. Adding a non-POSIX shell such as
 fish or nushell is one template that reads the same YAML — there is a worked
-fish example in `home/dot_config/shell/README.md`.
+fish example in `home/private_dot_config/shell/README.md`.
 
 ## Installing on a new machine
 
@@ -55,7 +55,10 @@ What it does, and why in that order:
    `~/.config/metapac/` from the inventory.
 4. **rust, via mise** — needed only to build metapac.
 5. **`cargo install metapac --locked`.**
-6. Stops, and tells you to run `metapac sync` yourself.
+6. Stops, and tells you to run
+   `metapac --config-dir "${XDG_CONFIG_HOME:-$HOME/.config}/metapac" sync` yourself.
+   The explicit directory also uses the generated XDG config on macOS, where
+   metapac otherwise defaults to `~/Library/Application Support/metapac/`.
 
 Steps 4 and 5 exist for one package. metapac publishes no release binaries, so
 it cannot come from mise or `cargo-binstall` and has to be compiled; everything
@@ -72,6 +75,26 @@ The same one-liner works — `bootstrap.sh` detects the package manager for its
 prerequisite check. Note that the inventory itself is still Ubuntu- and
 macOS-shaped: `arch:` and `dnf:` names are missing for most tools, so a lot will
 report as UNRESOLVED until they are filled in.
+
+### Existing macOS machines
+
+Review `chezmoi diff` before applying: bootstrap is for provisioning, not for
+preserving an existing laptop's package ownership. Local template data belongs
+under `data.machine` in the chezmoi configuration, outside this repository:
+
+- `gitSigningKey` and `gitAllowedSignersFile` retain machine-specific signing
+  settings. macOS uses the 1Password app signer and existing credential helpers.
+- `packageProviders` maps logical tool names to explicit backends, overriding
+  inventory preferences. An unavailable override is reported, not silently
+  replaced by another provider.
+- `packageExcludes` lists tools intentionally managed outside metapac.
+- `manualProvisioning: true` excludes both package-install scripts from chezmoi
+  operations. Packages must then be installed explicitly; `chezmoi update` only
+  updates the managed files.
+
+The private source attributes preserve `0700` on `.config`, `.config/git`,
+`.local`, `.local/share`, `Applications`, and `Documents`. Shell history and
+local shell overrides are excluded from management.
 
 ## Day to day
 
@@ -90,7 +113,7 @@ network; `chezmoi update` is now something you run deliberately.
 
 ## Vendored code
 
-- `home/dot_config/nvim` — started from
+- `home/private_dot_config/nvim` — started from
   [kickstart.nvim](https://github.com/nvim-lua/kickstart.nvim) and since
   diverged. Fully owned here, not tracked upstream.
 
@@ -115,7 +138,7 @@ metapac sync                                       execution
 
 - `home/.chezmoidata/packages.yaml` — every tool declared once, with the name
   it goes by in each backend. Backend ids are metapac's own, so Arch is `arch`.
-- `home/dot_config/metapac/**.tmpl` — the resolution layer.
+- `home/private_dot_config/metapac/**.tmpl` — the resolution layer.
 - `home/.chezmoitemplates/metapac-{platform,backends}` — shared partials, so
   the config and group templates cannot disagree about the platform.
 - `home/run_onchange_after_20-metapac-sync.sh.tmpl` — hashes the parsed
@@ -131,7 +154,8 @@ in `TODO.md` in [.bhell](https://github.com/highb/.bhell).
 
 ## TODO
 
-- `metapac sync` to install the tools `shell.yaml` assumes: `fd`, `bat`, `eza`,
+- `metapac --config-dir "${XDG_CONFIG_HOME:-$HOME/.config}/metapac" sync`
+  to install the tools `shell.yaml` assumes: `fd`, `bat`, `eza`,
   `zoxide` (`atuin` is still unresolvable — brew only, and there is no brew here)
 - Run `pkg-doctor`: 4 duplicate installs, 13 unowned binaries, 17 declared
   tools not yet installed

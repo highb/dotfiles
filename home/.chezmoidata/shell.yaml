@@ -1,8 +1,8 @@
 # Single source of truth for shell configuration.
 #
 # Everything here is rendered into ~/.config/shell/*.sh by the templates in
-# dot_config/shell/. Adding a shell means adding one template that reads this
-# same data - see dot_config/shell/README.md.
+# private_dot_config/shell/. Adding a shell means adding one template that reads
+# this same data - see private_dot_config/shell/README.md.
 
 shell:
   # Prepended to PATH in this order, so the first entry wins. Directories that

@@ -1,0 +1,10 @@
+# Shell history stays on each machine, outside the dotfiles repository.
+.bash_history
+.bash_history.*
+.zsh_history
+.zsh_history.*
+.zsh_histfile
+.zsh_histfile.*
+*dot_bash_history*
+*dot_zsh_history*
+*dot_zsh_histfile*

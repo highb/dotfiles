@@ -7,6 +7,22 @@
 # Machine-local shell overrides, sourced by .bashrc/.zshrc if present.
 .bashrc.local
 .zshrc.local
+.config/shell/env.local.sh
+
+# Shell history is machine-local data, never a dotfile to sync.
+.bash_history
+.bash_history.*
+.zsh_history
+.zsh_history.*
+.zsh_histfile
+.zsh_histfile.*
+
+# This machine provisions packages explicitly, not during dotfile updates.
+{{- $machine := get . "machine" | default dict }}
+{{ if get $machine "manualProvisioning" }}
+10-mise-direct.sh
+20-metapac-sync.sh
+{{ end }}
 
 *.bak
 .DS_Store

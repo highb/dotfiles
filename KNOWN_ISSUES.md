@@ -270,8 +270,9 @@ chezmoi: .config: inconsistent state
   (…/home/dot_config, …/home/private_dot_config)
 ```
 
-One target directory, one source attribute. Everything under `~/.config` uses
-`dot_config`.
+One target directory, one source attribute. Everything under `~/.config` now
+uses `private_dot_config` to preserve private directory permissions. Do not
+introduce a parallel `dot_config` directory.
 
 ### ~/.config/mise/config.toml is not managed by chezmoi
 
@@ -295,3 +296,12 @@ This is deliberate. Adding or changing a tool will.
 
 It prints in group-file format, so adopting an existing machine is mostly
 copy-paste. It is also long — 152 unmanaged apt packages here.
+
+### `pkg-doctor` does not recognize Homebrew or macOS system ownership
+
+Its ownership scan currently mislabels Homebrew and Apple-provided executables
+as unowned. A declared package name can also differ from its executable, such as
+`awscli` versus `aws`, and mise tools depend on the caller's activated PATH.
+Do not use these warnings to remove or reinstall packages on macOS. Consult
+the actual package-manager inventories; use metapac with the explicit
+`--config-dir "${XDG_CONFIG_HOME:-$HOME/.config}/metapac"` path.

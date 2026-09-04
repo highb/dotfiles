@@ -9,16 +9,22 @@ no entry for it or is not used on this platform.
 */ -}}
 {{- $platform := includeTemplate "metapac-platform" . -}}
 {{- $enabled := includeTemplate "metapac-backends" . | trim | splitList " " -}}
+{{- $machine := get . "machine" | default (dict) -}}
+{{- $providers := get $machine "packageProviders" | default (dict) -}}
+{{- $excludes := get $machine "packageExcludes" | default (list) -}}
 
-{{- /* Resolve: for each active tool, walk prefer ++ platform priority and
-       take the first backend that is enabled here and knows the tool. */ -}}
+{{- /* Resolve active, non-excluded tools. A machine provider override is
+       authoritative; otherwise walk prefer ++ platform priority. */ -}}
 {{- $assigned := dict -}}
 {{- $unresolved := list -}}
 {{- range $name, $tool := .packages.tools -}}
-{{-   if eq $tool.status "active" -}}
+{{-   if and (eq $tool.status "active") (not (has $name $excludes)) -}}
 {{-     $prefer := get $tool "prefer" | default (list) -}}
 {{-     $provs := get $tool "providers" | default (dict) -}}
 {{-     $candidates := concat $prefer $enabled -}}
+{{-     if hasKey $providers $name -}}
+{{-       $candidates = list (get $providers $name) -}}
+{{-     end -}}
 {{-     $chosen := "" -}}
 {{-     range $backend := $candidates -}}
 {{-       if and (eq $chosen "") (has $backend $enabled) (hasKey $provs $backend) -}}

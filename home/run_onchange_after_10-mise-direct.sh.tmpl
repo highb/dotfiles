@@ -13,8 +13,10 @@
 # This script is what keeps the mise-direct entries in it reproducible.
 #
 # Runs before 20-metapac-sync. Re-runs whenever the list below changes.
+{{- $machine := get . "machine" | default (dict) }}
+{{- $excludes := get $machine "packageExcludes" | default (list) }}
 {{ range $name, $tool := .packages.tools -}}
-{{- if eq $tool.status "mise-direct" }}
+{{- if and (eq $tool.status "mise-direct") (not (has $name $excludes)) }}
 #   {{ $name }} -> {{ (index $tool.providers "mise").name }}
 {{- end }}
 {{- end }}
@@ -26,7 +28,7 @@ if ! command -v mise >/dev/null 2>&1; then
     exit 0
 fi
 {{ range $name, $tool := .packages.tools }}
-{{- if eq $tool.status "mise-direct" }}
+{{- if and (eq $tool.status "mise-direct") (not (has $name $excludes)) }}
 mise use --global --quiet "{{ (index $tool.providers "mise").name }}@latest"
 {{- end }}
 {{- end }}

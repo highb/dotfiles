@@ -7,6 +7,12 @@
 # reformatting and comment-only edits do not trigger a resync.
 #
 # inventory sha256: {{ .packages | toJson | sha256sum }}
+{{- $machine := get . "machine" | default (dict) }}
+{{- $providers := get $machine "packageProviders" | default (dict) }}
+{{- $excludes := get $machine "packageExcludes" | default (list) }}
+{{- if or $providers $excludes }}
+# machine package policy sha256: {{ dict "providers" $providers "excludes" $excludes | toJson | sha256sum }}
+{{- end }}
 #
 # `metapac sync` has no dry-run and installs system packages, some of them
 # under sudo. It is therefore NOT run unattended: with a terminal it prompts,
@@ -23,13 +29,13 @@ if ! command -v metapac >/dev/null 2>&1; then
 fi
 
 if [ "${METAPAC_AUTOSYNC:-0}" = "1" ]; then
-    exec metapac sync --no-confirm
+    exec metapac --config-dir "${XDG_CONFIG_HOME:-$HOME/.config}/metapac" sync --no-confirm
 fi
 
 if [ -t 0 ] && [ -t 1 ]; then
-    exec metapac sync
+    exec metapac --config-dir "${XDG_CONFIG_HOME:-$HOME/.config}/metapac" sync
 fi
 
 echo "Package inventory changed. Review and apply with:" >&2
-echo "  metapac sync" >&2
+echo '  metapac --config-dir "${XDG_CONFIG_HOME:-$HOME/.config}/metapac" sync' >&2
 exit 0
