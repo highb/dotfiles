@@ -98,8 +98,9 @@ Review `chezmoi diff` before applying: bootstrap is for provisioning, not for
 preserving an existing laptop's package ownership. Local template data belongs
 under `data.machine` in the chezmoi configuration, outside this repository:
 
-- `packageGroups` selects packages and matching config bundles (see below).
-- `gitSigningKey` and `gitAllowedSignersFile` retain machine-specific signing
+- `packageGroups` selects packages and matching config bundles; see
+  [Select packages by task](#select-packages-by-task).
+- `gitSigningKey` and `gitAllowedSignersFile` keep machine-specific signing
   settings. macOS uses the 1Password app signer and existing credential helpers.
 - `packageProviders` maps logical tool names to explicit backends, overriding
   inventory preferences. An unavailable override is reported, not silently
