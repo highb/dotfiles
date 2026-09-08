@@ -272,8 +272,8 @@ Styles are separate downloads. `Packages` in the user-level file names them and
 `run_onchange_after_25-vale-sync.sh` does under the same
 `DOTFILES_INSTALL_PACKAGES=1` consent as every other installer here.
 
-Spelling needs a vocabulary, or Vale reports the whole toolchain. There are two,
-both under the StylesPath:
+Spelling needs a vocabulary, or Vale reports the whole toolchain. Two of them
+live under the StylesPath:
 
 - `Inventory` is rendered from `packages.yaml`, so every tool is named once and
   spelled everywhere. It covers the logical name, the name each package manager

@@ -54,6 +54,10 @@ nushell('s)?
 (?i)unmanaged
 (?i)vendored
 
+# Documents a repository carries
+(?i)runbooks?('s)?
+READMEs?
+
 # Version control and repositories
 (?i)repos?('s)?
 (?i)subcommands?('s)?
