@@ -56,6 +56,15 @@ bin/audio_fix.sh
 bin/gnome_toggle_dark_mode.sh
 {{ end }}
 
+# metapac ignores XDG_CONFIG_HOME on macOS and reads only its own native
+# config directory, so a bare `metapac` finds nothing. This symlink points
+# that native path at the generated ~/.config/metapac. Linux resolves XDG
+# itself and needs no link.
+{{ if ne .chezmoi.os "darwin" }}
+Library
+Library/**
+{{ end }}
+
 # This machine provisions packages explicitly, not during dotfile updates.
 {{- $machine := get . "machine" | default dict }}
 {{ if get $machine "manualProvisioning" }}

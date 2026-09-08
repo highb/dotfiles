@@ -33,6 +33,7 @@ class DeploymentTest(unittest.TestCase):
             ".chezmoiignore", ".chezmoidata", ".chezmoitemplates",
             "dot_bashrc", "dot_zshrc", "dot_profile", "dot_zshenv",
             "dot_gitconfig.tmpl", "private_dot_config", "private_dot_local", "bin",
+            "private_Library",
             "run_onchange_after_10-mise-direct.sh.tmpl",
             "run_onchange_after_20-metapac-sync.sh.tmpl",
             "run_after_30-pre-commit.sh.tmpl",
@@ -80,6 +81,10 @@ class DeploymentTest(unittest.TestCase):
         self.policy = {"chezmoi": {"os": platform}, "machine": machine}
         return set(self.command("managed", "--include=files").splitlines())
 
+    def symlinks(self, *, platform="darwin", **machine):
+        self.policy = {"chezmoi": {"os": platform}, "machine": machine}
+        return set(self.command("managed", "--include=symlinks").splitlines())
+
     def test_minimal_host_gets_complete_shell_without_development_or_desktop(self):
         targets = self.targets(["core", "shell"], platform="linux")
         self.assertTrue({
@@ -122,6 +127,16 @@ class DeploymentTest(unittest.TestCase):
         }.issubset(targets))
         self.assertTrue({".bashrc", ".zshrc", ".profile", ".zshenv", ".gitconfig", "bin/scaffold"}.isdisjoint(targets))
         self.assertFalse(any(path.startswith((".config/nvim/", ".config/shell/", ".config/ghostty/")) for path in targets))
+
+    def test_macos_links_native_metapac_config_dir_at_the_generated_one(self):
+        link = "Library/Application Support/metapac"
+        self.assertIn(link, self.symlinks(platform="darwin"))
+        self.assertNotIn(link, self.symlinks(platform="linux"))
+        self.symlinks(platform="darwin", manualProvisioning=True)
+        self.command("apply", "--include=files,dirs,symlinks")
+        deployed = self.home / link
+        self.assertEqual(deployed.readlink(), self.home / ".config/metapac")
+        self.assertTrue((deployed / "config.toml").is_file())
 
     def test_package_exclusions_do_not_disable_config_for_external_tools(self):
         normal = self.targets(["core", "shell", "development", "desktop"])

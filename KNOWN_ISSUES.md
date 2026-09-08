@@ -7,7 +7,7 @@ noted; nothing is inferred from documentation alone.
 Fixed problems are not listed. Workarounds that are load-bearing are, because
 removing one without understanding it will break something.
 
-**Versions this was observed against:** metapac 0.10.1, kickstart 0.6.0,
+**Versions this was observed against:** metapac 0.10.1–0.10.2, kickstart 0.6.0,
 chezmoi 2.47.1, mise 2026.6.14, nix 2.25.3, cargo 1.93.0.
 
 ---
@@ -97,6 +97,33 @@ running it and declining the prompt, which is not scriptable.
 operations report and skip installation. Opt-in authorizes `metapac sync
 --no-confirm`; review the generated declarations first. `manualProvisioning`
 remains a hard disable for both hooks, regardless of the flag.
+
+### metapac ignores XDG_CONFIG_HOME on macOS
+
+`metapac` resolves its config directory with the platform-native lookup, which
+on macOS is `~/Library/Application Support/metapac` and does **not** consult
+`XDG_CONFIG_HOME`. The generated inventory lives in `~/.config/metapac`, so a
+bare `metapac sync` reads no config, enables no backends, and reports success:
+
+```
+$ metapac sync
+ WARN  metapac::config > no config file found at "…/Library/Application Support/metapac/config.toml", using default config instead
+ WARN  metapac::core   > no backends found in the enabled_backends config
+ INFO  metapac::core   > nothing to install as there are no missing packages
+```
+
+"No missing packages" against an empty inventory is indistinguishable from a
+machine that is fully in sync, which is what makes this worth an entry.
+
+**Workaround:** `home/private_Library/private_Application Support/symlink_metapac.tmpl`
+points the native path at `~/.config/metapac`, so a bare `metapac` works here.
+Both `Library` directories are `private_` so chezmoi preserves their 0700 mode
+instead of widening it to 0755. `.chezmoiignore` drops the link off Linux, which
+resolves XDG itself. Scripts still pass `--config-dir` explicitly; they run on
+both platforms and must not depend on the link.
+
+**What would fix it upstream:** consult `XDG_CONFIG_HOME` on macOS too, as
+mise, atuin and most of this inventory already do.
 
 ### metapac rejects any mise name that is not in the registry
 

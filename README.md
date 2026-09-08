@@ -69,6 +69,10 @@ What it does, and why in that order:
    `chezmoi apply`, then `DOTFILES_INSTALL_PACKAGES=1 chezmoi apply`.
    This also retries hooks skipped before their prerequisites were installed.
    metapac uses the generated XDG config explicitly, including on macOS.
+   On macOS a chezmoi-managed symlink also points metapac's native config
+   directory, `~/Library/Application Support/metapac`, at that XDG one, so a
+   bare `metapac` command finds the inventory instead of silently reporting an
+   empty one. Scripts keep passing `--config-dir` so they stay portable.
 
 Steps 4 and 5 exist for one package. metapac publishes no release binaries, so
 it cannot come from mise or `cargo-binstall` and has to be compiled. Most other
