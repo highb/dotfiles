@@ -1,0 +1,52 @@
+#!/bin/sh
+# Download the Vale styles that ~/.config/vale/.vale.ini declares.
+#
+# Vale ships no styles of its own: `Packages` names them and `vale sync`
+# fetches each one into the StylesPath, which is ~/.local/share/vale/styles on
+# both Linux and macOS. Until that runs, every context resolves to a
+# configuration whose styles are absent.
+#
+# Two things make this its own hook rather than part of the metapac sync:
+#
+#   - `vale sync` reads exactly one configuration file, the one its own search
+#     finds. From any directory with a project .vale.ini that would be the
+#     project's, so the user-level file has to be named explicitly.
+#   - It runs after 20-metapac-sync, because that is what installs vale.
+#
+# Downloading a style is installing a package, so it takes the same consent as
+# every other installer here. Without it the styles simply are not there and
+# vale reports the missing styles itself.
+#
+# packages sha256: {{ .packages | toJson | sha256sum }}
+# install consent: {{ eq (env "DOTFILES_INSTALL_PACKAGES") "1" }}
+{{- $selection := includeTemplate "package-selection" . | fromJson }}
+# selected package groups: {{ $selection.groups | join ", " | default "(none)" }}
+# vale selected: {{ hasKey $selection.tools "vale" }}
+
+set -eu
+
+{{ if not (hasKey $selection.tools "vale") -}}
+exit 0 # vale is not selected on this machine.
+{{ end -}}
+vale_config="${XDG_CONFIG_HOME:-$HOME/.config}/vale/.vale.ini"
+
+if [ ! -f "$vale_config" ]; then
+    echo "no $vale_config; skipping vale sync" >&2
+    exit 0
+fi
+
+if [ "${DOTFILES_INSTALL_PACKAGES:-}" != "1" ]; then
+    echo "Skipping vale style downloads. Review $vale_config, then run:" >&2
+    echo "  DOTFILES_INSTALL_PACKAGES=1 chezmoi apply" >&2
+    exit 0
+fi
+
+if ! command -v vale >/dev/null 2>&1; then
+    echo "vale not installed; skipping style downloads" >&2
+    echo "  metapac installs it from the writing or development group" >&2
+    exit 0
+fi
+
+# --plain-progress prints one line per package, which is readable in a log.
+# sync replaces each style whole, so this is also how a style is updated.
+exec vale --config "$vale_config" sync --plain-progress

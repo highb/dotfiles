@@ -8,6 +8,12 @@
 .bashrc.local
 .zshrc.local
 .config/shell/env.local.sh
+# Machine-local Vale material, for an employer's terminology and house rules.
+# These dotfiles are published, so nothing here may be adopted by accident:
+# never let `chezmoi add -r` pull one of them in.
+.config/vale/contexts/*.local.ini
+.local/share/vale/styles/config/vocabularies/Work
+.local/share/vale/styles/config/vocabularies/Work/**
 
 # Shell history is machine-local data, never a dotfile to sync.
 .bash_history
@@ -46,6 +52,13 @@ bin/scaffold
 .local/share/scaffold
 .local/share/scaffold/**
 {{ end }}
+{{ if not (or (has "development" $groups) (has "writing" $groups)) }}
+bin/vale-as
+.config/vale
+.config/vale/**
+.local/share/vale
+.local/share/vale/**
+{{ end }}
 {{ if not (has "desktop" $groups) }}
 .config/ghostty
 .config/ghostty/**
@@ -70,6 +83,7 @@ Library/**
 {{ if get $machine "manualProvisioning" }}
 10-mise-direct.sh
 20-metapac-sync.sh
+25-vale-sync.sh
 {{ end }}
 
 *.bak

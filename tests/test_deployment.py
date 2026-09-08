@@ -36,6 +36,7 @@ class DeploymentTest(unittest.TestCase):
             "private_Library",
             "run_onchange_after_10-mise-direct.sh.tmpl",
             "run_onchange_after_20-metapac-sync.sh.tmpl",
+            "run_onchange_after_25-vale-sync.sh.tmpl",
             "run_after_30-pre-commit.sh.tmpl",
         ):
             original = SOURCE / entry
@@ -149,6 +150,47 @@ class DeploymentTest(unittest.TestCase):
         self.assertIn(".config/starship.toml", external)
         self.assertIn(".config/ghostty/config", external)
 
+    def test_vale_follows_the_tasks_that_write_and_never_syncs_local_material(self):
+        bundle = {
+            "bin/vale-as",
+            ".config/vale/.vale.ini",
+            ".config/vale/contexts/docs.ini",
+            ".config/vale/contexts/blog.ini",
+            ".config/vale/contexts/prose.ini",
+            ".config/vale/contexts/jobs.ini",
+            ".local/share/vale/styles/config/vocabularies/Inventory/accept.txt",
+            ".local/share/vale/styles/config/vocabularies/Local/accept.txt",
+        }
+        for groups in (["writing"], ["development"], None):
+            with self.subTest(groups=groups):
+                self.assertTrue(bundle.issubset(self.targets(groups)))
+        for groups in ([], ["shell"], ["core", "desktop"]):
+            with self.subTest(groups=groups):
+                self.assertTrue(bundle.isdisjoint(self.targets(groups)))
+
+    def test_local_vale_material_is_never_adopted_or_reverted(self):
+        # These dotfiles are published. A machine-local work context and an
+        # employer vocabulary must stay outside the repository even after
+        # `chezmoi add`, and an apply must leave both where they are.
+        self.targets(["writing"], manualProvisioning=True)
+        local = self.home / ".config/vale/contexts/work.local.ini"
+        vocabulary = self.home / (
+            ".local/share/vale/styles/config/vocabularies/Work/accept.txt"
+        )
+        for path, text in ((local, "MinAlertLevel = error\n"), (vocabulary, "Acme\n")):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text)
+        self.assertEqual(
+            self.command("add", str(local), str(vocabulary)).strip(), ""
+        )
+        self.assertFalse(list(self.source.glob("**/*work.local.ini*")))
+        self.assertFalse(list(self.source.glob("**/Work")))
+        self.command("apply", "--include=files,dirs")
+        self.assertEqual(local.read_text(), "MinAlertLevel = error\n")
+        self.assertEqual(vocabulary.read_text(), "Acme\n")
+        # The published context beside it is still deployed.
+        self.assertTrue((self.home / ".config/vale/contexts/docs.ini").is_file())
+
     def test_default_selection_retains_all_applicable_bundles(self):
         targets = self.targets()
         self.assertTrue({
@@ -181,7 +223,9 @@ class DeploymentTest(unittest.TestCase):
         )
         self.targets(["writing"], manualProvisioning=False)
         scripts = set(self.command("managed", "--include=scripts").splitlines())
-        self.assertEqual(scripts, {"10-mise-direct.sh", "20-metapac-sync.sh", "30-pre-commit.sh"})
+        self.assertEqual(scripts, {
+            "10-mise-direct.sh", "20-metapac-sync.sh", "25-vale-sync.sh", "30-pre-commit.sh",
+        })
 
     def test_apply_activates_hook_in_working_tree_without_package_installs(self):
         working_tree = self.root / "working tree's repository"

@@ -23,6 +23,11 @@ TEMPLATES = {
     "binaries": "private_dot_config/metapac/binaries.json.tmpl",
     "direct": "run_onchange_after_10-mise-direct.sh.tmpl",
     "sync": "run_onchange_after_20-metapac-sync.sh.tmpl",
+    "vale-sync": "run_onchange_after_25-vale-sync.sh.tmpl",
+    "vocabulary": (
+        "private_dot_local/private_share/vale/styles/config/vocabularies"
+        "/Inventory/accept.txt.tmpl"
+    ),
 }
 PARTIALS = (
     "package-selection",
@@ -99,7 +104,7 @@ class PackageGroupsTest(unittest.TestCase):
         (self.source / ".chezmoidata" / "packages.json").write_text(
             json.dumps({"packages": self.packages})
         )
-        for name in (*BACKENDS, "metapac"):
+        for name in (*BACKENDS, "metapac", "vale"):
             executable = self.bin / name
             executable.write_text(
                 '#!/bin/sh\n'
@@ -238,9 +243,13 @@ class PackageGroupsTest(unittest.TestCase):
         self.policy(packageGroups=["writing"])
         group, binaries, _ = self.manifests()
         self.assertCountEqual(
-            self.requests(group), [("mise", "hugo"), ("mise", "node"), ("mise", "zola")]
+            self.requests(group),
+            [("mise", "hugo"), ("mise", "node"), ("mise", "vale"), ("mise", "zola")],
         )
-        self.assertEqual(binaries, {"hugo": "hugo", "node": "node", "zola": "zola"})
+        self.assertEqual(
+            binaries,
+            {"hugo": "hugo", "node": "node", "vale": "vale", "zola": "zola"},
+        )
         self.assertEqual(self.run_hook("direct", consent="1")[0], [
             ["mise", "use", "--global", "--quiet", "npm:markdownlint-cli@latest"],
             ["mise", "use", "--global", "--quiet", "npm:prettier@latest"],
@@ -352,6 +361,93 @@ class PackageGroupsTest(unittest.TestCase):
         self.assertEqual(commands, [[
             "metapac", "--config-dir", str(self.root / "config" / "metapac"), "sync", "--no-confirm"
         ]])
+
+    def vale_config(self):
+        """The user-level file the hook syncs; chezmoi deploys it in production."""
+        path = Path(self.env["XDG_CONFIG_HOME"]) / "vale" / ".vale.ini"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("Packages = Std\n")
+        return path
+
+    def test_vale_is_pinned_and_reaches_both_groups_that_write_documentation(self):
+        for group in ("writing", "development"):
+            with self.subTest(group=group):
+                self.assertIn("vale", self.packages["groups"][group])
+                self.policy(packageGroups=[group])
+                packages = {
+                    (backend, package["name"]): package
+                    for backend, manifest in self.manifests()[0].items()
+                    for package in manifest["packages"]
+                }
+                # One backend, and a version, so every machine lints alike.
+                self.assertEqual(
+                    [key for key in packages if key[1] == "vale"], [("mise", "vale")]
+                )
+                self.assertEqual(
+                    packages["mise", "vale"]["options"]["version"], "3.20.0"
+                )
+
+    def test_vale_sync_needs_consent_a_config_file_and_a_selected_vale(self):
+        config = self.vale_config()
+        self.policy(packageGroups=["writing"])
+        commands, result = self.run_hook("vale-sync")
+        self.assertEqual(commands, [])
+        self.assertIn("DOTFILES_INSTALL_PACKAGES=1 chezmoi apply", result.stderr)
+
+        # Consent alone installs styles, and names the user-level file, because
+        # `vale sync` reads whichever config its own search finds otherwise.
+        commands, _ = self.run_hook("vale-sync", consent="1")
+        self.assertEqual(
+            commands, [["vale", "--config", str(config), "sync", "--plain-progress"]]
+        )
+
+        # An absent user-level configuration is a skip, not a failure.
+        config.unlink()
+        commands, result = self.run_hook("vale-sync", consent="1")
+        self.assertEqual(commands, [])
+        self.assertIn("skipping vale sync", result.stderr)
+        self.vale_config()
+
+        # No vale, no styles to install: excluded, or in no selected group.
+        for machine in (
+            {"packageGroups": ["writing"], "packageExcludes": ["vale"]},
+            {"packageGroups": ["shell"]},
+            {"packageGroups": []},
+        ):
+            with self.subTest(**machine):
+                self.policy(**machine)
+                self.assertEqual(self.run_hook("vale-sync", consent="1")[0], [])
+
+    def test_vale_sync_reports_a_missing_vale_without_failing_the_apply(self):
+        self.vale_config()
+        self.policy(packageGroups=["writing"])
+        (self.bin / "vale").unlink()
+        commands, result = self.run_hook("vale-sync", consent="1")
+        self.assertEqual(commands, [])
+        self.assertIn("vale not installed", result.stderr)
+
+    def test_vale_vocabulary_renders_every_name_the_inventory_knows(self):
+        self.policy(packageGroups=[])
+        entries = [
+            line for line in self.render("vocabulary").splitlines()
+            if line and not line.startswith("#")
+        ]
+        # The whole inventory, not the selected groups: a vocabulary is about
+        # words that appear in writing, and this machine selected no groups.
+        self.assertIn("(?i)ripgrep('s)?", entries)
+        self.assertIn("(?i)chezmoi('s)?", entries)
+        # The name a package manager knows a tool by, not only the logical one.
+        self.assertIn("(?i)rg('s)?", entries)
+        # And the package managers themselves, which get written about too.
+        self.assertIn("(?i)mise('s)?", entries)
+        self.assertIn("(?i)apt-get('s)?", entries)
+        # A prefixed mise name is reduced to the part that is a word.
+        self.assertIn("(?i)markdownlint-cli('s)?", entries)
+        self.assertNotIn("(?i)npm:markdownlint-cli('s)?", entries)
+        # Vale.Terms enforces an entry's casing, so lowercase names are
+        # case-insensitive and a sentence may still open with one.
+        self.assertTrue(all(entry.startswith("(?i)") for entry in entries))
+        self.assertEqual(entries, sorted(set(entries)))
 
     def test_no_backend_is_an_empty_list_not_an_empty_backend_name(self):
         for backend in BACKENDS:

@@ -34,10 +34,10 @@ packages:
   groups:
     core: [age, chezmoi, curl, file, git, jq, magic-wormhole, metapac, pre-commit, procps, pwgen, ripgrep, trufflehog, yq]
     shell: [atuin, bat, direnv, eza, fd, fzf, navi, starship, zoxide]
-    development: [build-essential, direnv, exercism, gh, git, httpie, kickstart, node, pre-commit, ruby, rust, trufflehog, vim, xh]
+    development: [build-essential, direnv, exercism, gh, git, httpie, kickstart, node, pre-commit, ruby, rust, trufflehog, vale, vim, xh]
     cloud: [awscli, google-cloud-cli]
     kubernetes: [helm, k3d, kubectl, kubie, kustomize]
-    writing: [hugo, markdownlint-cli, node, prettier, zola]
+    writing: [hugo, markdownlint-cli, node, prettier, vale, zola]
     desktop: [1password, code, discord, ghostty, slack]
     ai: [oh-my-pi]
 
@@ -450,6 +450,18 @@ packages:
       providers:
         mise: { name: trufflehog }
         brew: { name: trufflehog }
+
+    vale:
+      status: active
+      prefer: [mise]
+      note: >
+        Prose linter. Its styles are separate downloads: ~/.config/vale/.vale.ini
+        names them under `Packages`, and `vale sync` fetches them into
+        ~/.local/share/vale/styles. Pinned because the context configs in
+        ~/.config/vale/contexts were validated against 3.20.0.
+      providers:
+        mise: { name: vale, options: { version: 3.20.0 } }
+        brew: { name: vale }
 
     vim:
       status: active

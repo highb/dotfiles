@@ -8,6 +8,7 @@ Fixed problems are not listed. Workarounds that are load-bearing are, because
 removing one without understanding it will break something.
 
 **Versions this was observed against:** metapac 0.10.1–0.10.2, kickstart 0.6.0,
+vale 3.20.0,
 chezmoi 2.47.1, mise 2026.6.14, nix 2.25.3, cargo 1.93.0.
 
 ---
@@ -44,6 +45,47 @@ command on this machine.
 
 **What would fix it upstream:** a backend that cannot be queried should be a
 warning that excludes that backend, not a fatal error.
+
+### vale: the documented user-level config path is wrong on macOS
+
+`.vale.ini` documentation gives the user-level configuration as
+`$HOME/Library/Application Support/vale/.vale.ini` on macOS. Vale 3.20.0 reads
+`~/.config/vale/.vale.ini` there, which `vale ls-dirs` confirms:
+
+```
+$ vale ls-dirs
+Asset       | Default Location                        | Found
+StylesPath  | ~/.local/share/vale/styles              | ✓
+.vale.ini   | ~/.config/vale/.vale.ini                | ✓
+vale-native | ~/Library/Application Support/vale/…    | ✗
+```
+
+Only the native-messaging host uses the Apple location. **Consequence:** one
+managed path serves both platforms, so unlike metapac, Vale needs no symlink
+here. Trust `vale ls-dirs` over the table.
+
+### vale: the documented rule name for `Std.SentenceLength` does not exist
+
+`.vale.ini` documentation demonstrates the bracket key with
+`Std.SentenceLength[max] = 30`. The `Std` package installs that rule at
+`Std/Readability/SentenceLength.yml`, and Vale names a rule for its path inside
+the style, so the rule is `Std.Readability.SentenceLength`. The documented name
+silently adjusts nothing: a bracket key on a rule that does not exist is not an
+error, so the threshold appears to be set and the default still applies.
+
+```console
+$ vale --output=line short.md   # Std.SentenceLength[max] = 5
+$ vale --output=line short.md   # Std.Readability.SentenceLength[max] = 5
+short.md:1:1:Std.Readability.SentenceLength:Long sentence: 8 words.
+```
+
+Both spellings survive `ls-config`, which reports whatever was written under
+`RuleToParams`, so that command confirms the key was read and not that it
+reached a rule.
+
+**Workaround:** read the names off the installed files rather than the
+documentation, `find "$(vale ls-dirs | ...)/Std" -name '*.yml'`, and check the
+result with `vale ls-config`, which prints `RuleToParams`.
 
 ### kickstart: `validate` resolves hook paths against the working directory
 
@@ -85,6 +127,68 @@ rather than inside a subdirectory, and `directory` is not used at all.
 ## Upstream limitations
 
 Not bugs. Design gaps that shape how this repository is put together.
+
+### vale: a package can switch its own style on for every file
+
+`vale sync` copies each package's own `.vale.ini`, if it has one, into
+`.vale-config/` inside the StylesPath, and Vale reads those as configuration
+layers. The `Harper` package ships one:
+
+```ini
+# <StylesPath>/.vale-config/1-Harper.ini
+[*]
+BasedOnStyles = Harper
+```
+
+So installing Harper enables its 547 rules for every file, in every project, on
+top of whatever `BasedOnStyles` a configuration names. Because list keys join
+rather than replace, **no context can remove it** — a style enabled this way
+comes off one rule at a time, or not at all.
+
+This is by design and it is not a lot of noise in practice: Harper produced 9
+alerts on this repository's README against 83 from the spell checker. It is
+worth knowing because the style appears in `vale ls-config` under `GBaseStyles`
+without being named anywhere in `~/.config/vale`.
+
+### vale: a missing vocabulary is a runtime error, not a warning
+
+An unknown rule name in `.vale.ini` is ignored, and an unread key is a warning.
+A `Vocab` naming a directory that is not under the StylesPath stops the run:
+
+```
+$ vale ls-config
+E100 [vocab] Runtime error
+'Local' vocabulary not found; searched: …/styles/config/vocabularies/Local
+```
+
+**Consequence:** the user-level configuration names `Inventory` and `Local`
+only, and both are deployed by chezmoi beside it. The machine-local `Work`
+vocabulary is named by the machine-local context that uses it, so a machine
+without one is not broken by a reference to a directory it does not have.
+
+### vale: `sync` reads one configuration file, unlike every other command
+
+Every other command layers the user-level configuration under whatever the
+search finds. `vale sync` reads exactly one file and installs that file's
+`Packages`. Run from a directory with its own `.vale.ini`, it installs the
+project's packages and silently ignores the user-level ones.
+
+**Workaround:** `run_onchange_after_25-vale-sync.sh` passes
+`--config "${XDG_CONFIG_HOME:-$HOME/.config}/vale/.vale.ini"` rather than
+relying on the working directory.
+
+### vale: the styles overlap, and every overlap is a duplicate alert
+
+Of the nine styles installed here, three report passive voice
+(`write-good.Passive`, `Std.Grammar.PassiveVoice`, `AiTells.Passive`) and three
+report clichés (`proselint.Cliches`, `write-good.Cliches`, `AiTells.Cliche`).
+The `Readability` package installs seven readability metrics, all of which
+measure the same document. Nothing deduplicates them; a sentence simply gets
+reported three times, at three levels, by three styles.
+
+**Workaround:** each context switches one of each family on and the rest off,
+and enables a single readability rule by name — `Readability.FleschKincaid =
+YES` loads that rule without its style, so the other six are never read.
 
 ### metapac has no dry-run
 

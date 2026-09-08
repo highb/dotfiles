@@ -1,0 +1,81 @@
+#!/bin/sh
+# Run vale under one of the writing contexts in ~/.config/vale/contexts.
+#
+# A context is a whole configuration file, not a fragment: vale reads the one
+# file VALE_CONFIG_PATH names, with the user-level ~/.config/vale/.vale.ini
+# underneath it. Nothing here merges contexts, because vale has no include.
+
+vale_as_dir=${XDG_CONFIG_HOME:-$HOME/.config}/vale/contexts
+
+usage() {
+    printf '%s\n' 'Usage: vale-as CONTEXT [ARG...]' \
+        '       vale-as --list' \
+        '       vale-as --help' \
+        '' \
+        'CONTEXT contains only ASCII letters, digits, underscores, and hyphens.' \
+        "Contexts: $vale_as_dir/CONTEXT.ini" \
+        'A machine-local CONTEXT.local.ini beside it wins, and is never synced.' \
+        'ARG... goes to vale unchanged, so --minAlertLevel and --glob still work.'
+}
+
+list() {
+    if [ ! -d "$vale_as_dir" ]; then
+        printf '%s\n' "vale-as: no contexts directory at $vale_as_dir" >&2
+        return 1
+    fi
+    # A local file and a published file of the same name are one context.
+    for vale_as_file in "$vale_as_dir"/*.ini; do
+        [ -f "$vale_as_file" ] || continue
+        vale_as_name=${vale_as_file##*/}
+        vale_as_name=${vale_as_name%.ini}
+        printf '%s\n' "${vale_as_name%.local}"
+    done | sort -u
+}
+
+case "$1" in
+    '--help') usage; exit 0 ;;
+    '--list') list; exit $? ;;
+esac
+
+if [ "$#" -lt 1 ]; then
+    usage >&2
+    exit 2
+fi
+
+case "$1" in
+    ''|*[!abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-]*)
+        printf '%s\n' 'vale-as: invalid context name' >&2
+        usage >&2
+        exit 2
+        ;;
+esac
+
+# Machine-local first: a work context that cannot be published shadows the
+# published file of the same name without editing it.
+for vale_as_config in "$vale_as_dir/$1.local.ini" "$vale_as_dir/$1.ini"; do
+    [ -f "$vale_as_config" ] && [ -r "$vale_as_config" ] && break
+    vale_as_config=
+done
+
+if [ -z "$vale_as_config" ]; then
+    printf '%s\n' "vale-as: no context '$1' in $vale_as_dir" >&2
+    if list >/dev/null 2>&1; then
+        printf '%s\n' 'Available:' >&2
+        list | sed 's/^/  /' >&2
+    fi
+    exit 1
+fi
+
+shift
+
+if ! command -v vale >/dev/null 2>&1; then
+    printf '%s\n' 'vale-as: vale is not available on PATH' >&2
+    exit 127
+fi
+
+# --config would be overridden by a caller passing their own; the environment
+# variable loses to an explicit --config, which is the right precedence.
+VALE_CONFIG_PATH="$vale_as_config"
+export VALE_CONFIG_PATH
+
+exec vale "$@"

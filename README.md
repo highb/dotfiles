@@ -138,10 +138,10 @@ For TOML, add `packageGroups = ["core", "shell"]` under `[data.machine]`.
 | --- | --- |
 | `core` | age, chezmoi, curl, file, git, jq, magic-wormhole, metapac, pre-commit, procps, pwgen, ripgrep, trufflehog, yq |
 | `shell` | atuin, bat, direnv, eza, fd, fzf, navi, starship, zoxide |
-| `development` | build-essential, direnv, exercism, gh, git, httpie, kickstart, node, pre-commit, ruby, rust, trufflehog, vim, xh |
+| `development` | build-essential, direnv, exercism, gh, git, httpie, kickstart, node, pre-commit, ruby, rust, trufflehog, vale, vim, xh |
 | `cloud` | awscli, google-cloud-cli |
 | `kubernetes` | helm, k3d, kubectl, kubie, kustomize |
-| `writing` | hugo, markdownlint-cli, node, prettier, zola |
+| `writing` | hugo, markdownlint-cli, node, prettier, vale, zola |
 | `desktop` | 1password, code, discord, ghostty, slack |
 | `ai` | oh-my-pi |
 
@@ -206,6 +206,7 @@ configs, so an externally installed tool can still use its managed config.
 | `core` or `development` | Git configuration and allowed signers |
 | `development` | Neovim and repository helper scripts |
 | `development` or `writing` | Scaffold command and all scaffold templates |
+| `development` or `writing` | Vale contexts, vocabularies, and `vale-as` |
 | `desktop` | Ghostty configuration |
 | `desktop`, on Linux only | PulseAudio and GNOME helper scripts |
 
@@ -223,6 +224,77 @@ then use ordinary `chezmoi apply` to deploy without authorizing installations.
 **Ignoring is not deletion:** existing files from deselected groups remain on
 disk and may still be active. No automatic removal is performed. Local shell
 overrides, histories, and Neovim repository metadata remain excluded.
+
+### Prose linting
+
+[Vale](https://vale.sh) is configured per writing context rather than once.
+`~/.config/vale/.vale.ini` is the user-level file, which Vale reads underneath
+whatever configuration a run already found, so it holds only what should hold
+everywhere: the styles to download, the vocabularies, and a spell check. The
+opinionated parts live in one file per context:
+
+| Context | For | Level |
+| --- | --- | --- |
+| `docs` | Design docs, RFCs, runbooks, READMEs, tickets | warning |
+| `blog` | Posts and essays with a public byline | suggestion |
+| `prose` | Fiction and creative writing | warning |
+| `jobs` | Job posts and hiring copy | suggestion |
+
+```sh
+vale-as docs README.md              # one context, then vale's own arguments
+vale-as blog --minAlertLevel=error post.md
+vale-as --list
+```
+
+`vale-as` sets `VALE_CONFIG_PATH` and execs `vale`, so every vale flag still
+works. `vale ls-config` prints what a directory actually resolves to, and
+`vale --no-global` leaves the user-level file out of a run.
+
+Contexts do not inherit from each other, because Vale has no include: each one
+is a whole configuration, read on top of the user-level file. Two things about
+that layering decide how these files are written. List keys such as
+`BasedOnStyles` **join** across files, so a style named in the user-level file
+is added to every project and no context can remove it — which is why `[*]`
+there names only the built-in `Vale` style. Single-value keys such as
+`MinAlertLevel` are taken from the file read last, so a context, or a project,
+overrides the default.
+
+Each context is tuned rather than switched on. Of the nine installed styles,
+three check passive voice and three check clichés, so one of each runs and the
+rest are off; one readability metric runs of the seven the `Readability` style
+installs. The rules switched off in `docs.ini` were measured against this
+repository's own documentation, and each is a false positive in technical prose
+rather than a matter of taste. `prose.ini` leaves `Std`, `write-good`, `alex`
+and `neighbor` out entirely: everything they check is a choice in fiction.
+
+Styles are separate downloads. `Packages` in the user-level file names them and
+`vale sync` fetches them into `~/.local/share/vale/styles`, which
+`run_onchange_after_25-vale-sync.sh` does under the same
+`DOTFILES_INSTALL_PACKAGES=1` consent as every other installer here.
+
+Spelling needs a vocabulary, or Vale reports the whole toolchain. There are two,
+both under the StylesPath:
+
+- `Inventory` is rendered from `packages.yaml`, so every tool is named once and
+  spelled everywhere. It covers the logical name, the name each package manager
+  knows it by, and the package managers themselves. Do not edit it.
+- `Local` is hand-maintained, for general technical English that Vale's
+  dictionary lacks.
+
+Both are published. **Employer terminology, internal document names and house
+rules do not belong in either.** For those, two paths are kept out of the
+repository by `.chezmoiignore`, and a `chezmoi add` of them does nothing:
+
+```sh
+# A context that cannot be published. A local file wins over a published one
+# of the same name, so `vale-as work` finds this and `vale-as docs` is intact.
+cp ~/.config/vale/contexts/docs.ini ~/.config/vale/contexts/work.local.ini
+
+# Terminology to accept. Add `Vocab = Work` to that context; list keys join,
+# so it is added to Inventory and Local rather than replacing them.
+mkdir -p ~/.local/share/vale/styles/config/vocabularies/Work
+$EDITOR ~/.local/share/vale/styles/config/vocabularies/Work/accept.txt
+```
 
 ## Day to day
 

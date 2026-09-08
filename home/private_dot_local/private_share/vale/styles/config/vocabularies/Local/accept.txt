@@ -1,0 +1,76 @@
+# Hand-maintained. General technical English that Vale's dictionary does not
+# carry. Tool names are not here: they are rendered next door in ../Inventory
+# from packages.yaml, so a tool is named once and spelled everywhere.
+#
+# This file is published with the rest of these dotfiles. An employer's product
+# names, internal jargon, customer names and document titles do not belong in
+# it. Put those in a Work vocabulary beside this one, which .chezmoiignore
+# keeps out of the repository:
+#
+#   mkdir -p ~/.local/share/vale/styles/config/vocabularies/Work
+#   $EDITOR ~/.local/share/vale/styles/config/vocabularies/Work/accept.txt
+#
+# then add `Vocab = Work` to a machine-local context in
+# ~/.config/vale/contexts/*.local.ini. List keys join across configuration
+# files, so that adds the vocabulary rather than replacing this one.
+#
+# Two conventions, both because of Vale.Terms, which enforces the exact casing
+# of every entry an accept list holds:
+#
+#   - A word whose canonical form is lowercase is written `(?i)word`, so a
+#     sentence may still open with it.
+#   - A proper noun keeps its casing, so `neovim` is reported and `Neovim`
+#     is not.
+#
+# `('s)?` and `s?` are there because Vale reads "repo's" and "configs" as
+# single tokens and would otherwise report each one separately.
+#
+# Every entry below was measured: it is a word this repository's own
+# documentation uses that Vale reported as a misspelling.
+
+# Shells and their configuration
+(?i)ksh('s)?
+(?i)rc('s)?
+(?i)zsh('s)?
+nushell('s)?
+
+# Configuration and dotfiles
+(?i)configs?('s)?
+(?i)dotenv('s)?
+(?i)dotfiles?('s)?
+(?i)plaintext
+(?i)templated
+(?i)untrusted
+
+# Package management and runtimes
+(?i)backends?('s)?
+(?i)busybox('s)?
+(?i)distros?('s)?
+(?i)npm('s)?
+(?i)pnpm('s)?
+(?i)resync(ed|es|ing)?
+(?i)runtimes?('s)?
+(?i)toolchains?('s)?
+(?i)unmanaged
+(?i)vendored
+
+# Version control and repositories
+(?i)repos?('s)?
+(?i)subcommands?('s)?
+(?i)unstaged
+(?i)unreferenced
+
+# Qualities a tool or a design can have
+(?i)composability
+(?i)diffable
+(?i)idempotence
+(?i)idempotent
+(?i)scriptable
+
+# Proper nouns and formats
+Buildx
+Neovim('s)?
+Tera('s)?
+TTFs?
+(?i)rhai
+(?i)sudo
