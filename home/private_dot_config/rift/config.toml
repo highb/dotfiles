@@ -1,0 +1,71 @@
+[keys]
+"Ctrl + Shift + Alt + Z" = "toggle_space_activated"
+"Ctrl + Shift + Alt + H" = { move_focus = "left" }
+"Ctrl + Shift + Alt + J" = { move_focus = "down" }
+"Ctrl + Shift + Alt + K" = { move_focus = "up" }
+"Ctrl + Shift + Alt + L" = { move_focus = "right" }
+"Ctrl + Shift + Alt + Cmd + H" = { move_node = "left" }
+"Ctrl + Shift + Alt + Cmd + J" = { move_node = "down" }
+"Ctrl + Shift + Alt + Cmd + K" = { move_node = "up" }
+"Ctrl + Shift + Alt + Cmd + L" = { move_node = "right" }
+"Ctrl + Shift + Alt + Cmd + Space" = "toggle_window_floating"
+
+"Ctrl + Shift + Alt + Cmd + Left" = { move_window_to_display = { selector = "left" } }
+"Ctrl + Shift + Alt + Cmd + Right" = { move_window_to_display = { selector = "right" } }
+"Ctrl + Shift + Alt + Cmd + Up" = { move_window_to_display = { selector = "up" } }
+"Ctrl + Shift + Alt + Cmd + Down" = { move_window_to_display = { selector = "down" } }
+
+"Ctrl + Shift + Alt + 1" = { switch_to_workspace = "main" }
+"Ctrl + Shift + Alt + 2" = { switch_to_workspace = "ext-left" }
+"Ctrl + Shift + Alt + 3" = { switch_to_workspace = "ext-right" }
+"Ctrl + Shift + Alt + 4" = { switch_to_workspace = 3 }
+"Ctrl + Shift + Alt + 5" = { switch_to_workspace = 4 }
+"Ctrl + Shift + Alt + 6" = { switch_to_workspace = 5 }
+"Ctrl + Shift + Alt + 7" = { switch_to_workspace = 6 }
+"Ctrl + Shift + Alt + 8" = { switch_to_workspace = 7 }
+"Ctrl + Shift + Alt + 9" = { switch_to_workspace = 8 }
+"Ctrl + Shift + Alt + Cmd + 1" = { move_window_to_workspace = "main" }
+"Ctrl + Shift + Alt + Cmd + 2" = { move_window_to_workspace = "ext-left" }
+"Ctrl + Shift + Alt + Cmd + 3" = { move_window_to_workspace = "ext-right" }
+"Ctrl + Shift + Alt + Cmd + 4" = { move_window_to_workspace = 3 }
+"Ctrl + Shift + Alt + Cmd + 5" = { move_window_to_workspace = 4 }
+"Ctrl + Shift + Alt + Cmd + 6" = { move_window_to_workspace = 5 }
+"Ctrl + Shift + Alt + Cmd + 7" = { move_window_to_workspace = 6 }
+"Ctrl + Shift + Alt + Cmd + 8" = { move_window_to_workspace = 7 }
+"Ctrl + Shift + Alt + Cmd + 9" = { move_window_to_workspace = 8 }
+
+[settings.layout]
+mode = "master_stack"
+
+[settings.layout.gaps.outer]
+top = 4.0
+left = 4.0
+bottom = 4.0
+right = 4.0
+
+[settings.layout.gaps.inner]
+horizontal = 4.0
+vertical = 4.0
+
+[virtual_workspaces]
+enabled = true
+default_workspace_count = 9
+auto_assign_windows = true
+workspace_names = ["main", "ext-left", "ext-right"]
+
+workspace_rules = [
+  { workspace = "ext-left", layout = "bsp" },
+  { workspace = "ext-right", layout = "bsp" },
+]
+
+# Bundle IDs pulled from `rift-cli query applications` on 2026-09-15.
+app_rules = [
+  { app_id = "com.mitchellh.ghostty", workspace = "ext-left" },
+  { app_id = "com.google.Chrome", workspace = "ext-left" },
+  { app_id = "com.google.Chrome.app.bignlenoamcachgggpnngenilljeihhe", workspace = "ext-left" }, # Squire PWA
+  { app_id = "com.tinyspeck.slackmacgap", workspace = "ext-right" },
+  { app_id = "us.zoom.xos", workspace = "ext-right" },
+  { app_id = "notion.id", workspace = "main" },
+  { app_id = "md.obsidian", workspace = "main" },
+  { app_id = "com.linear", workspace = "main" },
+]
