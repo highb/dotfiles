@@ -10,6 +10,11 @@
 # missing it tells you the command to run and stops.
 
 set -eu
+echo "sleepy, give me 5"
+sleep 5
+echo "5 more plz"
+sleep 5
+echo "okay fine"
 
 GITHUB_USER=highb
 info()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
