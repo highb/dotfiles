@@ -84,6 +84,7 @@ Library/**
 {{ if get $machine "manualProvisioning" }}
 10-mise-direct.sh
 15-1password-apt.sh
+16-1password-vendor.sh
 20-metapac-sync.sh
 25-vale-sync.sh
 {{ end }}

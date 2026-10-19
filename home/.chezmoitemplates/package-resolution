@@ -8,19 +8,23 @@
 {{- if $backends -}}{{- $enabled = splitList " " $backends -}}{{- end -}}
 {{- $machine := get . "machine" | default (dict) -}}
 {{- $providers := get $machine "packageProviders" | default (dict) -}}
+{{- /* Vendor hooks participate in availability/resolution, but are never
+       emitted as metapac backends. */ -}}
+{{- $available := $enabled -}}
+{{- $enabled = without $enabled "1password-vendor" -}}
 {{- $assigned := dict -}}
 {{- $unresolved := list -}}
 {{- range $name, $tool := $selection.tools -}}
 {{-   if eq $tool.status "active" -}}
 {{-     $prefer := get $tool "prefer" | default (list) -}}
 {{-     $provs := get $tool "providers" | default (dict) -}}
-{{-     $candidates := concat $prefer $enabled -}}
+{{-     $candidates := concat $prefer $available -}}
 {{-     if hasKey $providers $name -}}
 {{-       $candidates = list (get $providers $name) -}}
 {{-     end -}}
 {{-     $chosen := "" -}}
 {{-     range $backend := $candidates -}}
-{{-       if and (eq $chosen "") (has $backend $enabled) (hasKey $provs $backend) -}}
+{{-       if and (eq $chosen "") (has $backend $available) (hasKey $provs $backend) -}}
 {{-         $chosen = $backend -}}
 {{-       end -}}
 {{-     end -}}

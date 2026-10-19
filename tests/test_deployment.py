@@ -36,6 +36,7 @@ class DeploymentTest(unittest.TestCase):
             "private_Library",
             "run_onchange_after_10-mise-direct.sh.tmpl",
             "run_onchange_after_15-1password-apt.sh.tmpl",
+            "run_onchange_after_16-1password-vendor.sh.tmpl",
             "run_onchange_after_20-metapac-sync.sh.tmpl",
             "run_onchange_after_25-vale-sync.sh.tmpl",
             "run_after_30-pre-commit.sh.tmpl",
@@ -123,13 +124,17 @@ class DeploymentTest(unittest.TestCase):
 
     def test_desktop_deploys_current_private_1password_agent_config(self):
         target = ".config/1Password/ssh/agent.toml"
-        self.assertNotIn(target, self.targets(["shell"]))
-        self.assertIn(target, self.targets(["desktop"], manualProvisioning=True))
-        self.command("apply", "--include=files,dirs")
-        deployed = self.home / target
-        self.assertEqual(deployed.read_text(),
-                         (SOURCE / "private_dot_config/private_1Password/private_ssh/private_agent.toml").read_text())
-        self.assertEqual(deployed.stat().st_mode & 0o777, 0o600)
+        for platform in ("linux", "darwin"):
+            with self.subTest(platform=platform):
+                self.assertNotIn(target, self.targets(["shell"], platform=platform))
+                self.assertIn(target, self.targets(["desktop"], platform=platform, manualProvisioning=True))
+                self.command("apply", "--include=files,dirs")
+                deployed = self.home / target
+                self.assertEqual(deployed.read_text(),
+                                 (SOURCE / "private_dot_config/private_1Password/private_ssh/private_agent.toml").read_text())
+                self.assertEqual(deployed.stat().st_mode & 0o777, 0o600)
+                self.assertEqual(deployed.parent.stat().st_mode & 0o777, 0o700)
+                self.assertEqual(deployed.parent.parent.stat().st_mode & 0o777, 0o700)
 
     def test_empty_tasks_keep_package_control_but_no_task_configs(self):
         targets = self.targets([])
@@ -235,7 +240,7 @@ class DeploymentTest(unittest.TestCase):
         self.targets(["writing"], manualProvisioning=False)
         scripts = set(self.command("managed", "--include=scripts").splitlines())
         self.assertEqual(scripts, {
-            "10-mise-direct.sh", "15-1password-apt.sh", "20-metapac-sync.sh", "25-vale-sync.sh", "30-pre-commit.sh",
+            "10-mise-direct.sh", "15-1password-apt.sh", "16-1password-vendor.sh", "20-metapac-sync.sh", "25-vale-sync.sh", "30-pre-commit.sh",
         })
 
     def test_hook_skips_when_tools_are_not_selected_or_installed(self):

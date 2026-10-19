@@ -107,12 +107,14 @@ packages:
       note: "Native vendor package; also provides /opt/1Password/op-ssh-sign. See docs/1password.md."
       providers:
         apt: { name: 1password }
+        1password-vendor: { name: 1password, method: "official signed vendor installer/repository" }
 
     1password-cli:
       status: active
-      note: "Native vendor CLI (op), installed from the signed 1Password APT repository."
+      note: "Native vendor CLI (op), installed from signed official vendor sources."
       providers:
         apt: { name: 1password-cli, binary: op }
+        1password-vendor: { name: 1password-cli, binary: op, method: "official signed vendor installer/repository" }
 
     age:
       status: active

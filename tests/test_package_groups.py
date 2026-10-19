@@ -213,7 +213,7 @@ class PackageGroupsTest(unittest.TestCase):
 
     def test_1password_uses_only_native_vendor_packages(self):
         for name in ("1password", "1password-cli"):
-            self.assertEqual(set(self.packages["tools"][name]["providers"]), {"apt"})
+            self.assertEqual(set(self.packages["tools"][name]["providers"]), {"apt", "1password-vendor"})
         self.packages["provider_priority"] = {
             platform: ["apt"] for platform in self.packages["provider_priority"]
         }

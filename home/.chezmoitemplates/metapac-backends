@@ -16,4 +16,13 @@
 {{-     end -}}
 {{-   end -}}
 {{- end -}}
+{{- $vendor := false -}}
+{{- if eq .chezmoi.os "darwin" -}}
+{{- $vendor = and (ne (lookPath "curl") "") (ne (lookPath "pkgutil") "") (ne (lookPath "installer") "") -}}
+{{- else if eq .chezmoi.os "linux" -}}
+{{- $id := .chezmoi.osRelease.id -}}
+{{- if has $id (list "fedora" "rhel" "bazzite" "bluefin" "aurora" "ublue") -}}
+{{- $vendor = and (or (ne (lookPath "dnf") "") (ne (lookPath "rpm-ostree") "")) (ne (lookPath "rpm") "") -}}
+{{- end -}}{{- end -}}
+{{- if $vendor -}}{{- $out = append $out "1password-vendor" -}}{{- end -}}
 {{ $out | join " " }}

@@ -1,7 +1,7 @@
 {{- $r := includeTemplate "package-resolution" . | fromJson -}}
 Selected roles: {{ $r.selection.groups | join ", " | default "(none)" }}
-{{ range $backend, $entries := $r.assigned }}{{ range $entries }}  {{ .tool }} -> {{ $backend }}:{{ .spec.name }}
+{{ range $backend, $entries := $r.assigned }}{{ range $entries }}  {{ .tool }} -> {{ $backend }}:{{ .spec.name }}{{ if eq $backend "1password-vendor" }} ({{ if eq $.chezmoi.os "darwin" }}vendor PKG; Apple signature, AgileBits identity and certificate verification{{ else }}{{ if lookPath "rpm-ostree" }}verified vendor RPM files via rpm-ostree layering (reboot required); pinned key and package signatures{{ else }}vendor RPM repository via DNF; pinned key, repository and package signatures{{ end }}{{ end }}){{ end }}
 {{ end }}{{ end }}{{ range $name, $tool := $r.selection.tools }}{{ if eq $tool.status "mise-direct" }}  {{ $name }} -> mise:{{ (index $tool.providers "mise").name }}
-{{ end }}{{ end }}{{ range $r.unresolved }}  UNRESOLVED: {{ . }}
+{{ end }}{{ end }}{{ range $r.unresolved }}  UNRESOLVED: {{ . }}{{ if or (eq . "1password") (eq . "1password-cli") }} (unsupported platform or unavailable native vendor provider; no fallback){{ end }}
 {{ end }}{{ if get (get . "machine" | default dict) "manualProvisioning" }}Manual provisioning enabled: package installation hooks are disabled.
 {{ end }}

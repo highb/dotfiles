@@ -411,4 +411,4 @@ and do not persist checkout credentials or receive repository secrets.
 - Secrets via a real backend rather than by leaving them out
 - Move `.tmux.conf.local` and the flavours config out of `.bhell` and into here
 
-See [1Password provisioning](docs/1password.md) for the native signed packages and SSH agent configuration.
+See [1Password provisioning](docs/1password.md) for official signed APT packages, macOS PKGs, Fedora/RHEL RPMs, Bazzite/Universal Blue rpm-ostree layering, and the private Linux/macOS SSH agent configuration.
