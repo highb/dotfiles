@@ -2,6 +2,34 @@
 
 Personal configuration, managed with [chezmoi](https://www.chezmoi.io).
 
+## Supported platforms
+
+Primary targets are Ubuntu/Debian Linux (including Pop!_OS) and macOS.
+CI checks Ubuntu 24.04 and macOS 15. Arch Linux and Fedora have partial
+provisioning support; much of their package inventory is still unresolved.
+Windows, WSL, Android/Termux, and other operating systems are not currently
+supported deployment targets. See [AGENTS.md](AGENTS.md) for contributor rules.
+
+### Clipboard
+
+The `core`, `shell`, `development`, `desktop`, and `ai` groups request Linux's
+`wl-clipboard` (Wayland) and `xclip` (X11). Both are installed so switching
+sessions does not require reprovisioning. macOS uses built-in `pbcopy` and
+`pbpaste`; Linux clipboard packages are omitted there. Applications choose the
+provider at runtime from the session environment; do not force X11 globally
+on Wayland. Neovim already enables `unnamedplus` and detects the provider.
+
+On Ubuntu/Debian/Pop!_OS, repair an existing installation with
+`sudo apt-get install wl-clipboard xclip`, or use the normal opted-in package
+apply. Fedora uses `sudo dnf install wl-clipboard xclip`; Arch uses
+`sudo pacman -S --needed wl-clipboard xclip`.
+Validate with `command -v wl-copy wl-paste` on Wayland,
+`command -v xclip` on X11, or `command -v pbcopy pbpaste` on macOS;
+in Neovim run `:checkhealth vim.provider`. Restart applications after installing.
+Headless/SSH sessions without a forwarded display have no local desktop
+clipboard; terminal clipboard integration depends on the terminal and application.
+The Termux suggestion in a generic error message does not imply repo support.
+
 ## Layout
 
 `.chezmoiroot` points chezmoi at `home/`, so the top level of this repository
@@ -123,14 +151,14 @@ For TOML, add `packageGroups = ["core", "shell"]` under `[data.machine]`.
 
 | Group | Packages |
 | --- | --- |
-| `core` | age, chezmoi, curl, file, git, jq, magic-wormhole, metapac, pre-commit, procps, pwgen, ripgrep, trufflehog, yq |
-| `shell` | atuin, bat, direnv, eza, fd, fzf, navi, starship, zoxide |
-| `development` | build-essential, direnv, exercism, gh, git, httpie, kickstart, node, pre-commit, ruby, rust, trufflehog, vale, vim, xh |
+| `core` | age, chezmoi, curl, file, git, jq, magic-wormhole, metapac, pre-commit, procps, pwgen, ripgrep, trufflehog, yq, wl-clipboard and xclip (Linux) |
+| `shell` | atuin, bat, direnv, eza, fd, fzf, navi, starship, zoxide, wl-clipboard and xclip (Linux) |
+| `development` | build-essential, direnv, exercism, gh, git, httpie, kickstart, node, pre-commit, ruby, rust, trufflehog, vale, vim, xh, wl-clipboard and xclip (Linux) |
 | `cloud` | awscli, google-cloud-cli |
 | `kubernetes` | helm, k3d, kubectl, kubie, kustomize |
 | `writing` | hugo, markdownlint-cli, node, prettier, vale, zola |
-| `desktop` | 1password, 1password-cli, code, discord, ghostty, slack |
-| `ai` | oh-my-pi |
+| `desktop` | 1password, 1password-cli, code, discord, ghostty, slack, wl-clipboard and xclip (Linux) |
+| `ai` | oh-my-pi, wl-clipboard and xclip (Linux) |
 
 Groups combine without duplicate installs. No group is mandatory; include `core`
 explicitly if wanted. Required runtimes are listed alongside their tools:
@@ -189,12 +217,12 @@ configs, so an externally installed tool can still use its managed config.
 
 | Selected task | Managed bundle |
 | --- | --- |
-| `shell` | bash/zsh startup files, the complete shared shell layer, Starship |
+| `shell` | bash/zsh startup files, the complete shared shell layer, Starship, wl-clipboard and xclip (Linux) |
 | `core` or `development` | Git configuration and allowed signers |
-| `development` | Neovim and repository helper scripts |
+| `development` | Neovim and repository helper scripts, wl-clipboard and xclip (Linux) |
 | `development` or `writing` | Scaffold command and all scaffold templates |
 | `development` or `writing` | Vale contexts, vocabularies, and `vale-as` |
-| `desktop` | Ghostty configuration |
+| `desktop` | Ghostty configuration, wl-clipboard and xclip (Linux) |
 | `desktop`, on Linux only | PulseAudio and GNOME helper scripts |
 
 Cloud, Kubernetes, and AI currently have no separate managed config bundles.

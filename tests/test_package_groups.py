@@ -211,6 +211,25 @@ class PackageGroupsTest(unittest.TestCase):
             if tool["status"] == "mise-direct"
         ]
 
+    def test_clipboard_selection_tracks_os_and_respects_exclusions(self):
+        for os_name in ("linux", "darwin"):
+            for group in ("core", "shell", "development", "desktop", "ai"):
+                with self.subTest(os=os_name, group=group):
+                    self.policy(packageGroups=[group])
+                    selection = json.loads(self.render_text(
+                        '{{ $_ := set .chezmoi "os" "' + os_name + '" }}'
+                        '{{ includeTemplate "package-selection" . }}'
+                    ))
+                    for name in ("wl-clipboard", "xclip"):
+                        self.assertEqual(name in selection["tools"], os_name == "linux")
+        self.policy(packageGroups=["development"], packageExcludes=["wl-clipboard", "xclip"])
+        selection = json.loads(self.render_text(
+            '{{ $_ := set .chezmoi "os" "linux" }}'
+            '{{ includeTemplate "package-selection" . }}'
+        ))
+        self.assertNotIn("wl-clipboard", selection["tools"])
+        self.assertNotIn("xclip", selection["tools"])
+
     def test_1password_uses_only_native_vendor_packages(self):
         for name in ("1password", "1password-cli"):
             self.assertEqual(set(self.packages["tools"][name]["providers"]), {"apt", "1password-vendor"})

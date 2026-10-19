@@ -42,7 +42,9 @@
 {{- $tools := dict -}}
 {{- range $group := $selected -}}
 {{-   range $name := get $groups $group -}}
-{{-     if not (has $name $excludes) -}}
+{{-     $tool := index $.packages.tools $name -}}
+{{-     $platforms := get $tool "platforms" | default (list $.chezmoi.os) -}}
+{{-     if and (not (has $name $excludes)) (has $.chezmoi.os $platforms) -}}
 {{-       $_ := set $tools $name (index $.packages.tools $name) -}}
 {{-     end -}}
 {{-   end -}}

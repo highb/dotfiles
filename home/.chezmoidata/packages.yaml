@@ -32,14 +32,14 @@ packages:
   # Omitted machine.packageGroups preserves the full inventory; [] selects none.
   # packageExcludes wins over membership. No group is implicitly required.
   groups:
-    core: [age, chezmoi, curl, file, git, jq, magic-wormhole, metapac, pre-commit, procps, pwgen, ripgrep, trufflehog, yq]
-    shell: [atuin, bat, direnv, eza, fd, fzf, navi, starship, zoxide]
-    development: [build-essential, direnv, exercism, gh, git, httpie, kickstart, node, pre-commit, ruby, rust, trufflehog, vale, vim, xh]
+    core: [age, chezmoi, curl, file, git, jq, magic-wormhole, metapac, pre-commit, procps, pwgen, ripgrep, trufflehog, yq, wl-clipboard, xclip]
+    shell: [atuin, bat, direnv, eza, fd, fzf, navi, starship, zoxide, wl-clipboard, xclip]
+    development: [build-essential, direnv, exercism, gh, git, httpie, kickstart, node, pre-commit, ruby, rust, trufflehog, vale, vim, xh, wl-clipboard, xclip]
     cloud: [awscli, google-cloud-cli]
     kubernetes: [helm, k3d, kubectl, kubie, kustomize]
     writing: [hugo, markdownlint-cli, node, prettier, vale, zola]
-    desktop: [1password, 1password-cli, code, discord, ghostty, slack]
-    ai: [oh-my-pi]
+    desktop: [1password, 1password-cli, code, discord, ghostty, slack, wl-clipboard, xclip]
+    ai: [oh-my-pi, wl-clipboard, xclip]
 
   # Which backend wins, most preferred first. This is the layer metapac does
   # not have: it treats every enabled backend independently, so without this a
@@ -478,6 +478,24 @@ packages:
         apt: { name: vim }
         arch: { name: vim }
         brew: { name: vim }
+
+    wl-clipboard:
+      status: active
+      platforms: [linux]
+      note: "Native Wayland clipboard; applications detect wl-copy and wl-paste at runtime."
+      providers:
+        apt: { name: wl-clipboard, binary: wl-copy }
+        dnf: { name: wl-clipboard, binary: wl-copy }
+        arch: { name: wl-clipboard, binary: wl-copy }
+
+    xclip:
+      status: active
+      platforms: [linux]
+      note: "X11 clipboard fallback; macOS uses built-in pbcopy/pbpaste."
+      providers:
+        apt: { name: xclip }
+        dnf: { name: xclip }
+        arch: { name: xclip }
 
     xh:
       status: active
