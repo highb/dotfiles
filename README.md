@@ -129,7 +129,7 @@ For TOML, add `packageGroups = ["core", "shell"]` under `[data.machine]`.
 | `cloud` | awscli, google-cloud-cli |
 | `kubernetes` | helm, k3d, kubectl, kubie, kustomize |
 | `writing` | hugo, markdownlint-cli, node, prettier, vale, zola |
-| `desktop` | 1password, code, discord, ghostty, slack |
+| `desktop` | 1password, 1password-cli, code, discord, ghostty, slack |
 | `ai` | oh-my-pi |
 
 Groups combine without duplicate installs. No group is mandatory; include `core`
@@ -410,3 +410,5 @@ and do not persist checkout credentials or receive repository secrets.
 - Manage application colour schemes coherently
 - Secrets via a real backend rather than by leaving them out
 - Move `.tmux.conf.local` and the flavours config out of `.bhell` and into here
+
+See [1Password provisioning](docs/1password.md) for the native signed packages and SSH agent configuration.

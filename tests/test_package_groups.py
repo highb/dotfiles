@@ -211,6 +211,56 @@ class PackageGroupsTest(unittest.TestCase):
             if tool["status"] == "mise-direct"
         ]
 
+    def test_1password_uses_only_native_vendor_packages(self):
+        for name in ("1password", "1password-cli"):
+            self.assertEqual(set(self.packages["tools"][name]["providers"]), {"apt"})
+        self.packages["provider_priority"] = {
+            platform: ["apt"] for platform in self.packages["provider_priority"]
+        }
+        (self.source / ".chezmoidata/packages.json").write_text(json.dumps({"packages": self.packages}))
+        (self.bin / "apt-get").write_text("#!/bin/sh\nexit 0\n")
+        (self.bin / "apt-get").chmod(0o700)
+        self.policy(packageGroups=["desktop"])
+        requests = self.requests(self.manifests()[0])
+        self.assertIn(("apt", "1password"), requests)
+        self.assertIn(("apt", "1password-cli"), requests)
+        self.policy(packageGroups=["shell"])
+        self.assertFalse(any(name.startswith("1password") for _, name in self.requests(self.manifests()[0])))
+
+    def test_1password_repository_rejects_wrong_fingerprint_before_sudo(self):
+        self.packages["provider_priority"] = {
+            platform: ["apt"] for platform in self.packages["provider_priority"]
+        }
+        (self.source / ".chezmoidata/packages.json").write_text(json.dumps({"packages": self.packages}))
+        fakes = {
+            "apt-get": "exit 0",
+            "dpkg": "echo amd64",
+            "curl": 'while [ "$#" -gt 0 ]; do if [ "$1" = -o ]; then printf key > "$2"; exit; fi; shift; done',
+            "gpg": 'case "$*" in *--show-keys*) printf "fpr:::::::::%s:\\n" "$TEST_FINGERPRINT" ;; *--dearmor*) cp "$5" "$4" ;; esac',
+            "sudo": 'printf "%s\\n" "$*" >> "$PACKAGE_TEST_LOG"',
+        }
+        for name, body in fakes.items():
+            executable = self.bin / name
+            executable.write_text("#!/bin/sh\n" + body + "\n")
+            executable.chmod(0o700)
+        self.env["PATH"] += ":/usr/bin:/bin"
+        self.policy(packageGroups=["desktop"])
+        template = (SOURCE / "run_onchange_after_15-1password-apt.sh.tmpl").read_text()
+        script = self.root / "vendor.sh"
+        script.write_text(self.render_text(template))
+        for fingerprint, succeeds in (("BAD", False), ("3FEF9748469ADBE15DA7CA80AC2D62742012EA22", True)):
+            with self.subTest(fingerprint=fingerprint):
+                self.log.write_text("")
+                env = dict(self.env, DOTFILES_INSTALL_PACKAGES="1", TEST_FINGERPRINT=fingerprint)
+                result = subprocess.run(["/bin/sh", str(script)], env=env, capture_output=True, text=True, timeout=10)
+                self.assertEqual(result.returncode == 0, succeeds, result.stderr)
+                if succeeds:
+                    self.assertIn("apt-get update", self.log.read_text())
+                    self.assertIn("/etc/debsig/policies/", self.log.read_text())
+                else:
+                    self.assertIn("fingerprint mismatch", result.stderr)
+                    self.assertEqual(self.log.read_text(), "")
+
     def test_omitted_equals_all_and_groups_cover_installable_inventory(self):
         inventory = self.packages["tools"]
         installable = {

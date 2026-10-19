@@ -38,7 +38,7 @@ packages:
     cloud: [awscli, google-cloud-cli]
     kubernetes: [helm, k3d, kubectl, kubie, kustomize]
     writing: [hugo, markdownlint-cli, node, prettier, vale, zola]
-    desktop: [1password, code, discord, ghostty, slack]
+    desktop: [1password, 1password-cli, code, discord, ghostty, slack]
     ai: [oh-my-pi]
 
   # Which backend wins, most preferred first. This is the layer metapac does
@@ -104,9 +104,15 @@ packages:
   tools:
     1password:
       status: active
-      note: "also the ssh commit signer: .gitconfig points at /opt/1Password/op-ssh-sign"
+      note: "Native vendor package; also provides /opt/1Password/op-ssh-sign. See docs/1password.md."
       providers:
-        snap: { name: 1password }
+        apt: { name: 1password }
+
+    1password-cli:
+      status: active
+      note: "Native vendor CLI (op), installed from the signed 1Password APT repository."
+      providers:
+        apt: { name: 1password-cli, binary: op }
 
     age:
       status: active
