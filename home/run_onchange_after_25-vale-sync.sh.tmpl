@@ -24,6 +24,7 @@
 # vale selected: {{ hasKey $selection.tools "vale" }}
 
 set -eu
+{{ includeTemplate "package-runtime" . }}
 
 {{ if not (hasKey $selection.tools "vale") -}}
 exit 0 # vale is not selected on this machine.
@@ -35,13 +36,9 @@ if [ ! -f "$vale_config" ]; then
     exit 0
 fi
 
-if [ "${DOTFILES_INSTALL_PACKAGES:-}" != "1" ]; then
-    echo "Skipping vale style downloads. Review $vale_config, then run:" >&2
-    echo "  DOTFILES_INSTALL_PACKAGES=1 chezmoi apply" >&2
-    exit 0
-fi
+package_consent || exit 0
 
-if ! command -v vale >/dev/null 2>&1; then
+if ! package_have vale; then
     echo "vale not installed; skipping style downloads" >&2
     echo "  metapac installs it from the writing or development group" >&2
     exit 0

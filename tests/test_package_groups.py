@@ -31,6 +31,8 @@ TEMPLATES = {
 }
 PARTIALS = (
     "package-selection",
+    "package-plan",
+    "package-runtime",
     "package-resolution",
     "metapac-platform",
     "metapac-backends",
@@ -116,6 +118,7 @@ class PackageGroupsTest(unittest.TestCase):
             )
             executable.chmod(0o700)
         (self.bin / "sh").symlink_to("/bin/sh")
+        (self.bin / "cat").symlink_to("/bin/cat")
 
     def policy(self, **machine):
         self.config.write_text(json.dumps({"data": {"machine": machine}}))
@@ -159,7 +162,7 @@ class PackageGroupsTest(unittest.TestCase):
             tomllib.loads(self.render("config")),
         )
 
-    def run_hook(self, name, *, consent=None, legacy=False, tty=False):
+    def run_hook(self, name, *, consent=None, legacy=False, tty=False, answer="n"):
         self.log.write_text("")
         script = self.root / f"{name}.sh"
         script.write_text(self.render(name))
@@ -173,6 +176,7 @@ class PackageGroupsTest(unittest.TestCase):
             master, terminal = pty.openpty()
             self.addCleanup(os.close, master)
             self.addCleanup(os.close, terminal)
+            os.write(master, (answer + "\n").encode())
         result = subprocess.run(
             ["/bin/sh", str(script)],
             stdin=terminal if tty else subprocess.DEVNULL,
@@ -482,6 +486,13 @@ class PackageGroupsTest(unittest.TestCase):
                     self.assertTrue(commands)
                     if name == "sync":
                         self.assertEqual(commands[0][-1], "--no-confirm")
+
+    def test_interactive_confirmation_authorizes_installation_without_environment(self):
+        self.policy(packageGroups=["writing"])
+        for hook in ("direct", "sync"):
+            with self.subTest(hook=hook):
+                commands, _ = self.run_hook(hook, tty=True, answer="y")
+                self.assertTrue(commands)
 
     def test_excluding_every_selected_package_invokes_no_installers(self):
         self.policy(

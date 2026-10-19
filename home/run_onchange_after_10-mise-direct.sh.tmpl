@@ -23,17 +23,14 @@
 {{- end }}
 
 set -eu
+{{ includeTemplate "package-runtime" . }}
 
 {{ if not $selection.tools -}}
 exit 0 # No selected packages.
 {{ end -}}
-if [ "${DOTFILES_INSTALL_PACKAGES:-}" != "1" ]; then
-    echo "Skipping mise-direct installs. Review packages, then run:" >&2
-    echo "  DOTFILES_INSTALL_PACKAGES=1 chezmoi apply" >&2
-    exit 0
-fi
+package_consent || exit 0
 
-if ! command -v mise >/dev/null 2>&1; then
+if ! package_have mise; then
     echo "mise not installed; skipping mise-direct tools" >&2
     exit 0
 fi

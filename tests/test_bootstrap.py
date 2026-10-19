@@ -111,8 +111,8 @@ esac
         self.assertIn(["cargo", "1", "install", "metapac", "--locked"], commands)
         self.assertTrue(all(command[1] == "1" for command in commands))
         self.assertFalse(any(command[0] in ("curl", "brew") for command in commands))
-        self.assertIn("DOTFILES_INSTALL_PACKAGES=1 chezmoi apply", result.stdout)
-        self.assertIn("machine.manualProvisioning", result.stdout)
+        self.assertLess(commands.index(["cargo", "1", "install", "metapac", "--locked"]),
+                        commands.index(["chezmoi", "1", "apply"]))
 
     def test_opt_in_preserves_prerequisite_refusal_without_system_install(self):
         (self.bin / "git").unlink()

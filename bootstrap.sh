@@ -1,7 +1,7 @@
 #!/bin/sh
 # Bootstrap a machine from nothing to a working environment.
 #
-#   DOTFILES_INSTALL_PACKAGES=1 sh -c "$(curl -fsSL https://raw.githubusercontent.com/highb/dotfiles/main/bootstrap.sh)"
+#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/highb/dotfiles/main/bootstrap.sh)"
 #
 # Idempotent: every step checks before acting, so re-running it is a no-op and
 # a half-finished run can simply be repeated.
@@ -19,8 +19,10 @@ die()   { printf '\033[1;31merror\033[0m %s\n' "$*" >&2; exit 1; }
 have()  { command -v "$1" >/dev/null 2>&1; }
 
 if [ "${DOTFILES_INSTALL_PACKAGES:-}" != "1" ]; then
-    die "bootstrap requires explicit installation consent. Review bootstrap.sh, then run:
-  DOTFILES_INSTALL_PACKAGES=1 sh bootstrap.sh"
+    [ -t 0 ] || die "Noninteractive bootstrap requires DOTFILES_INSTALL_PACKAGES=1 sh bootstrap.sh"
+    printf 'Bootstrap installs mise, chezmoi, Rust/cargo and metapac. Continue? [y/N] '
+    read -r answer
+    case "$answer" in y|Y|yes) ;; *) exit 0 ;; esac
 fi
 
 # --- 0. prerequisites ------------------------------------------------------
@@ -69,17 +71,6 @@ fi
 CHEZMOI=$("$MISE" which chezmoi 2>/dev/null || command -v chezmoi)
 [ -n "$CHEZMOI" ] || die "chezmoi unavailable after install"
 
-# --- 3. dotfiles -----------------------------------------------------------
-SRC=$("$CHEZMOI" source-path 2>/dev/null || echo "")
-if [ -n "$SRC" ] && [ -d "$SRC" ]; then
-    ok "dotfiles already checked out at $SRC"
-    info "applying"
-    "$CHEZMOI" apply
-else
-    info "initialising dotfiles from $GITHUB_USER"
-    "$CHEZMOI" init --apply "$GITHUB_USER"
-fi
-
 # --- 4. rust, for metapac only --------------------------------------------
 # metapac publishes no release binaries, so it cannot come from mise or
 # cargo-binstall and must be compiled. This is the only reason rust is on the
@@ -102,18 +93,15 @@ else
     cargo install metapac --locked
 fi
 
-# --- 6. packages -----------------------------------------------------------
-# Applying without consent first records the skipped hooks, so the opted-in
-# apply also retries hooks whose prerequisites were installed during bootstrap.
-info "bootstrap complete"
-cat <<'NEXT'
-
-  Review the declared packages, then apply with installation consent:
-
-      chezmoi apply
-      DOTFILES_INSTALL_PACKAGES=1 chezmoi apply
-                            # machine.manualProvisioning still disables hooks
-      pkg-doctor            # duplicates, unowned binaries, what is missing
-
-  Then open a new shell so the mise activation in ~/.config/shell takes effect.
-NEXT
+# Configure before the first apply, after provisioning prerequisites exist.
+SRC=$("$CHEZMOI" source-path 2>/dev/null || echo "")
+if [ -z "$SRC" ] || [ ! -d "$SRC" ]; then
+    "$CHEZMOI" init "$GITHUB_USER"
+fi
+TREE=$("$CHEZMOI" execute-template '{{ .chezmoi.workingTree }}')
+if [ -t 0 ]; then
+    export CHEZMOI
+    exec bash "$TREE/scripts/configure.sh"
+fi
+"$CHEZMOI" apply
+info "bootstrap complete; open a new shell"

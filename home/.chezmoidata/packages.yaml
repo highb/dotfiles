@@ -379,6 +379,7 @@ packages:
       status: active
       note: "installs the chezmoi repository's staged-secret gate; requires 4.4 or newer"
       providers:
+        mise: { name: pre-commit }
         brew: { name: pre-commit }
         uv: { name: pre-commit }
 

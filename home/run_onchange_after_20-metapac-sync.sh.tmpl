@@ -16,21 +16,18 @@
 # machine package policy sha256: {{ dict "groups" $selection.groups "groupsExplicit" $selection.groupsExplicit "providers" $providers "excludes" $excludes | toJson | sha256sum }}
 #
 # `metapac sync` has no dry-run and installs system packages, some under sudo.
-# Only DOTFILES_INSTALL_PACKAGES=1 authorizes installation, with or without a
-# terminal. Consent is rendered above so a skipped apply can be opted into later.
+# Interactive runs preview and confirm; automation uses scoped environment
+# consent. Consent is rendered above so skipped hooks can be retried later.
 
 set -eu
+{{ includeTemplate "package-runtime" . }}
 
 {{ if not $selection.tools -}}
 exit 0 # No selected packages.
 {{ end -}}
-if [ "${DOTFILES_INSTALL_PACKAGES:-}" != "1" ]; then
-    echo "Skipping package sync. Review packages, then run:" >&2
-    echo "  DOTFILES_INSTALL_PACKAGES=1 chezmoi apply" >&2
-    exit 0
-fi
+package_consent || exit 0
 
-if ! command -v metapac >/dev/null 2>&1; then
+if ! package_have metapac; then
     echo "metapac not installed; skipping package sync" >&2
     echo "  cargo install metapac --locked" >&2
     exit 0

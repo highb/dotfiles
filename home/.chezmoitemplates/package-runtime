@@ -1,0 +1,24 @@
+# Shared runtime checks: selection is resolved at render time; availability at
+# execution time, after earlier provisioning hooks have run.
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:${XDG_DATA_HOME:-$HOME/.local/share}/mise/shims:$PATH"
+package_have() { command -v "$1" >/dev/null 2>&1; }
+package_planned() {
+    case "$1" in
+{{ $r := includeTemplate "package-resolution" . | fromJson }}{{ range $backend, $entries := $r.assigned }}{{ range $entries }}        {{ .tool }}) return 0 ;;
+{{ end }}{{ end }}{{ range $name, $tool := $r.selection.tools }}{{ if eq $tool.status "mise-direct" }}        {{ $name }}) return 0 ;;
+{{ end }}{{ end }}        *) return 1 ;;
+    esac
+}
+package_consent() {
+    [ "${DOTFILES_INSTALL_PACKAGES:-}" = 1 ] && return 0
+    if [ -t 0 ]; then
+        cat <<'DOTFILES_PLAN'
+{{ includeTemplate "package-plan" . }}
+DOTFILES_PLAN
+        printf 'Install configured packages for this step? [y/N] '
+        read -r answer || return 1
+        case "$answer" in y|Y|yes) return 0 ;; esac
+    fi
+    echo 'Skipping installation. Run the Bash configuration wizard or DOTFILES_INSTALL_PACKAGES=1 chezmoi apply.' >&2
+    return 1
+}

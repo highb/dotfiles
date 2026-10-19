@@ -37,53 +37,39 @@ fish example in `home/private_dot_config/shell/README.md`.
 
 ## Installing on a new machine
 
-To provision only selected tasks, first create
-`${XDG_CONFIG_HOME:-$HOME/.config}/chezmoi/chezmoi.json` with the
-`data.machine.packageGroups` setting shown in [Select packages by task](#select-packages-by-task).
-Without that setting, bootstrap uses all groups.
+Run the interactive bootstrap in a terminal:
 
 ```sh
-DOTFILES_INSTALL_PACKAGES=1 sh -c "$(curl -fsSL https://raw.githubusercontent.com/highb/dotfiles/main/bootstrap.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/highb/dotfiles/main/bootstrap.sh)"
 ```
 
-The flag explicitly authorizes bootstrap prerequisites and selected task
-packages. Without it, bootstrap exits before installing or applying anything.
+Bootstrap asks before installing mise, chezmoi, Rust/cargo and metapac. It then
+checks out the source without applying it and opens a Bash wizard. Choose the
+roles for this host; the wizard writes `data.machine.packageGroups` to the
+active chezmoi config, preserving other settings. No editor is required.
+It shows the resolved packages and providers, including unresolved tools,
+then asks for confirmation before applying dotfiles and installing packages.
+Declining saves the configuration without applying it.
 
-`bootstrap.sh` is idempotent — re-running it is a no-op, and an interrupted run
-can just be repeated. It will not install system packages behind your back: if
-`curl` or `git` is missing it prints the command for your platform and stops.
+To run the wizard again:
 
-What it does, and why in that order:
+```sh
+bash "$(chezmoi execute-template '{{ .chezmoi.workingTree }}')/scripts/configure.sh"
+```
 
-1. **mise**, from `https://mise.run`. The one bootstrap that still matters.
-2. **chezmoi, via mise.** Deliberately not a snap and not a loose binary in
-   `~/bin` — both had happened here, and the `~/bin` copy was shadowing
-   everything else with a build from March 2024.
-3. **`chezmoi init --apply`**, which lays down the dotfiles, generates
-   `~/.config/metapac/` for the selected groups, and runs the package hooks
-   unless `machine.manualProvisioning` disables them. The bootstrap opt-in is
-   inherited by both hooks, so selected task packages may be installed here.
-4. **rust, via mise** — needed only to build metapac.
-5. **`cargo install metapac --locked`.**
-6. Stops with instructions to review the declarations, run a normal
-   `chezmoi apply`, then `DOTFILES_INSTALL_PACKAGES=1 chezmoi apply`.
-   This also retries hooks skipped before their prerequisites were installed.
-   metapac uses the generated XDG config explicitly, including on macOS.
-   On macOS a chezmoi-managed symlink also points metapac's native config
-   directory, `~/Library/Application Support/metapac`, at that XDG one, so a
-   bare `metapac` command finds the inventory instead of silently reporting an
-   empty one. Scripts keep passing `--config-dir` so they stay portable.
+A normal interactive `chezmoi apply` also previews and asks before each package
+installation step. Noninteractive use still requires scoped consent:
+`DOTFILES_INSTALL_PACKAGES=1 sh bootstrap.sh` or
+`DOTFILES_INSTALL_PACKAGES=1 chezmoi apply`.
+`machine.manualProvisioning` disables package installation hooks in either mode.
+Missing curl or git produces installation instructions and stops bootstrap.
 
-Steps 4 and 5 exist for one package. metapac publishes no release binaries, so
-it cannot come from mise or `cargo-binstall` and has to be compiled. Most other
-selected tools arrive through metapac; `mise-direct` tools use the earlier hook.
-If upstream ever ships binaries, both steps collapse into a single
-`mise use --global`.
-
-`metapac sync` has no dry-run and can install system packages under sudo.
-Neither hook runs an installer during ordinary `chezmoi apply` or
-`chezmoi update`, even with a terminal. `DOTFILES_INSTALL_PACKAGES=1` is the
-only hook opt-in; it authorizes metapac's `--no-confirm` mode as well as mise.
+Rust is needed to compile metapac because it publishes no release binaries.
+All bootstrap prerequisites are installed before the first apply, so dependent
+hooks run after their tools can be provisioned. Runtime checks refresh PATH for
+mise shims and cargo binaries. Commit protection is activated only when both
+pre-commit and TruffleHog have resolved providers for the selected roles and
+both executables are present after provisioning.
 
 ### Arch or Fedora
 
@@ -119,7 +105,7 @@ management.
 
 ### Select packages by task
 
-Run `chezmoi edit-config` and set `data.machine.packageGroups`. For example,
+Run the Bash wizard above, or set `data.machine.packageGroups` manually. For example,
 in a JSON configuration, merge this field into the existing `machine` object
 without replacing provider overrides, exclusions, or other settings:
 
@@ -169,7 +155,7 @@ chezmoi diff ~/.config/metapac
 chezmoi apply --include=files,dirs ~/.config/metapac
 ```
 
-When ready to authorize installation through the hooks:
+For automation, authorize installation through the hooks:
 
 ```sh
 DOTFILES_INSTALL_PACKAGES=1 chezmoi apply
@@ -182,7 +168,7 @@ retains chezmoi's normal run-on-change behavior.
 
 With `machine.manualProvisioning: true`, neither hook runs, even with this flag.
 Keep that hard stop and install selected tools manually, or set it to `false`
-to use the explicit opt-in workflow. For manual provisioning, install selected
+to use interactive confirmation or automation consent. For manual provisioning, install selected
 `mise-direct` tools explicitly, then run
 `metapac --config-dir "${XDG_CONFIG_HOME:-$HOME/.config}/metapac" sync`.
 The direct tools are `npm:markdownlint-cli` and `npm:prettier` in `writing`,
@@ -343,13 +329,18 @@ metapac sync                                       execution
 - `home/private_dot_config/metapac/**.tmpl` — the resolution layer.
 - `home/.chezmoitemplates/package-{selection,resolution}` — shared task
   selection and provider resolution for manifests, deployment rules, and hooks.
+- `home/.chezmoitemplates/package-{plan,runtime}` — shared package previews,
+  `package_planned` provider checks, `package_have` executable checks, and
+  interactive installation consent.
+- `scripts/configure.sh` — the Bash host-role wizard and config writer.
 - `home/.chezmoitemplates/metapac-{platform,backends}` — platform and backend
   detection.
 - `home/run_onchange_after_20-metapac-sync.sh.tmpl` — hashes the parsed
   inventory, machine package policy, and per-command install consent. Neither
-  it nor the direct mise hook installs without `DOTFILES_INSTALL_PACKAGES=1`.
+  it nor the direct mise hook installs without interactive confirmation or
+  scoped `DOTFILES_INSTALL_PACKAGES=1` consent.
 - `home/run_after_30-pre-commit.sh.tmpl` — activates the repository's Git hook
-  after provisioning when pre-commit is available. It installs no packages and
+  after provisioning when pre-commit and TruffleHog are planned and available. It installs no packages and
   is not disabled by `manualProvisioning`.
 - `docs/provisioning-gap.md` — why this shape.
 

@@ -1,0 +1,7 @@
+{{- $r := includeTemplate "package-resolution" . | fromJson -}}
+Selected roles: {{ $r.selection.groups | join ", " | default "(none)" }}
+{{ range $backend, $entries := $r.assigned }}{{ range $entries }}  {{ .tool }} -> {{ $backend }}:{{ .spec.name }}
+{{ end }}{{ end }}{{ range $name, $tool := $r.selection.tools }}{{ if eq $tool.status "mise-direct" }}  {{ $name }} -> mise:{{ (index $tool.providers "mise").name }}
+{{ end }}{{ end }}{{ range $r.unresolved }}  UNRESOLVED: {{ . }}
+{{ end }}{{ if get (get . "machine" | default dict) "manualProvisioning" }}Manual provisioning enabled: package installation hooks are disabled.
+{{ end }}

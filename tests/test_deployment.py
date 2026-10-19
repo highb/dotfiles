@@ -227,11 +227,23 @@ class DeploymentTest(unittest.TestCase):
             "10-mise-direct.sh", "20-metapac-sync.sh", "25-vale-sync.sh", "30-pre-commit.sh",
         })
 
+    def test_hook_skips_when_tools_are_not_selected_or_installed(self):
+        working_tree = self.root / "working-tree"
+        working_tree.mkdir()
+        (working_tree / ".pre-commit-config.yaml").write_text("repos: []\n")
+        (self.root / "bin/sh").symlink_to("/bin/sh")
+        for groups in ([], ["core"]):
+            with self.subTest(groups=groups):
+                self.targets(groups, manualProvisioning=True)
+                self.policy["chezmoi"]["workingTree"] = str(working_tree)
+                self.command("apply", "--include=scripts")
+                self.assertFalse((working_tree / ".git/hooks/pre-commit").exists())
+
     def test_apply_activates_hook_in_working_tree_without_package_installs(self):
         working_tree = self.root / "working tree's repository"
         working_tree.mkdir()
         (working_tree / ".pre-commit-config.yaml").write_text("repos: []\n")
-        self.targets([], manualProvisioning=True)
+        self.targets(["core"], manualProvisioning=True)
         self.policy["chezmoi"]["workingTree"] = str(working_tree)
         (self.root / "bin/sh").symlink_to("/bin/sh")
         log = self.root / "hook-install.log"
@@ -241,6 +253,8 @@ class DeploymentTest(unittest.TestCase):
             '#!/bin/sh\nprintf "%s\\n" "$PWD" "$@" > "$HOOK_INSTALL_LOG"\n'
         )
         executable.chmod(0o700)
+        (self.root / "bin/trufflehog").symlink_to(executable)
+        (self.root / "bin/mise").symlink_to(executable)
         self.command("apply", "--include=scripts")
         self.assertEqual(
             log.read_text().splitlines(),
