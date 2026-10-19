@@ -3,6 +3,28 @@
 Read README.md and KNOWN_ISSUES.md before changing provisioning or platform behavior.
 These instructions apply to this entire repository, including delegated agents.
 
+## Purpose and core loop
+
+These dotfiles augment Brandon's shell and OS environment to expand his own
+capabilities through as much deterministic code as possible. They also provide
+access to LLMs to help drive further augmentation of that environment.
+
+- Turn recurring needs and lessons from LLM-assisted work into reusable local
+  tools: scripts, commands, configuration, and repeatable workflows.
+- Prefer deterministic code for behavior that can be expressed and verified
+  reliably. Use LLMs to help discover, build, explain, and improve those tools.
+- Always seek to leave Brandon with tools he can run locally without LLM
+  assistance. Where a capability inherently requires an LLM, make that dependency
+  explicit and keep the surrounding workflow usable and inspectable locally.
+- Treat comprehensive documentation as part of the deliverable. Explain the
+  purpose, prerequisites, setup, commands, expected results, verification, and
+  troubleshooting in enough detail for Brandon to follow independently.
+- Keep durable instructions and examples in the repository alongside the tools;
+  a chat response alone is not sufficient documentation for a new workflow.
+- Close the loop by making each augmentation reproducible through chezmoi and
+  the repository's provisioning model, with an independent local entry point
+  and documentation for using and maintaining it.
+
 ## Supported platforms
 
 - Primary: Ubuntu/Debian Linux, including Pop!_OS, and macOS.
