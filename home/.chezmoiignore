@@ -83,6 +83,7 @@ Library/**
 {{- $machine := get . "machine" | default dict }}
 {{ if get $machine "manualProvisioning" }}
 10-mise-direct.sh
+18-delta.sh
 15-1password-apt.sh
 16-1password-vendor.sh
 20-metapac-sync.sh
@@ -91,3 +92,7 @@ Library/**
 
 *.bak
 .DS_Store
+
+{{ if not (has "ai" $groups) }}
+bin/install-delta
+{{ end }}

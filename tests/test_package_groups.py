@@ -23,6 +23,7 @@ TEMPLATES = {
     "binaries": "private_dot_config/metapac/binaries.json.tmpl",
     "direct": "run_onchange_after_10-mise-direct.sh.tmpl",
     "sync": "run_onchange_after_20-metapac-sync.sh.tmpl",
+    "delta": "run_onchange_after_18-delta.sh.tmpl",
     "vale-sync": "run_onchange_after_25-vale-sync.sh.tmpl",
     "vocabulary": (
         "private_dot_local/private_share/vale/styles/config/vocabularies"
@@ -230,6 +231,48 @@ class PackageGroupsTest(unittest.TestCase):
         self.assertNotIn("wl-clipboard", selection["tools"])
         self.assertNotIn("xclip", selection["tools"])
 
+    def test_delta_hook_honors_selection_consent_and_provider_policy(self):
+        for name in ("python3", "curl"):
+            executable = self.bin / name
+            executable.write_text('#!/bin/sh\nprintf "%s" "${0##*/}" >> "$PACKAGE_TEST_LOG"\nfor arg do printf "\\t%s" "$arg" >> "$PACKAGE_TEST_LOG"; done\nprintf "\\n" >> "$PACKAGE_TEST_LOG"\n')
+            executable.chmod(0o700)
+        template = ('{{ $_ := set .chezmoi "os" "linux" }}'
+                    '{{ $_ := set .chezmoi "arch" "amd64" }}' + self.templates["delta"])
+        self.templates = dict(self.templates, delta=template)
+        self.policy(packageGroups=["ai"])
+        self.assertEqual(self.run_hook("delta")[0], [])
+        self.assertEqual(self.run_hook("delta", consent="1")[0],
+                         [["python3", str(self.home / "bin/install-delta")]])
+        for machine in ({"packageGroups": ["writing"]},
+                        {"packageGroups": ["ai"], "packageExcludes": ["delta"]},
+                        {"packageGroups": ["ai"], "manualProvisioning": True},
+                        {"packageGroups": ["ai"], "packageProviders": {"delta": "mise"}}):
+            self.policy(**machine)
+            self.assertEqual(self.run_hook("delta", consent="1")[0], [])
+
+    def test_ai_uses_codex_and_the_correct_fx_release(self):
+        self.policy(packageGroups=["ai"])
+        group, binaries, _ = self.manifests()
+        self.assertIn(("mise", "codex"), self.requests(group))
+        self.assertEqual(binaries["codex"], "codex")
+        commands, _ = self.run_hook("direct", consent="1")
+        self.assertIn(["mise", "use", "--global", "--quiet", "github:vercel-labs/fx@latest"], commands)
+        self.assertFalse(any("antonmedv" in part for command in commands for part in command))
+
+    def test_flatpak_writing_apps_include_user_flathub(self):
+        self.packages["provider_priority"] = {p: ["flatpak"] for p in self.packages["provider_priority"]}
+        (self.source / ".chezmoidata/packages.json").write_text(json.dumps({"packages": self.packages}))
+        executable = self.bin / "flatpak"
+        executable.write_text("#!/bin/sh\nexit 0\n")
+        executable.chmod(0o700)
+        self.policy(packageGroups=["writing"])
+        manifest = self.manifests()[0]
+        self.assertEqual({p["name"] for p in manifest["flatpak"]["packages"]},
+                         {"user:com.logseq.Logseq", "user:md.obsidian.Obsidian"})
+        self.assertEqual(manifest["flatpak"]["repos"][0]["name"], "user:flathub")
+        self.policy(packageGroups=["ai"])
+        self.assertNotIn("flatpak", self.manifests()[0])
+
     def test_1password_uses_only_native_vendor_packages(self):
         for name in ("1password", "1password-cli"):
             self.assertEqual(set(self.packages["tools"][name]["providers"]), {"apt", "1password-vendor"})
@@ -291,10 +334,13 @@ class PackageGroupsTest(unittest.TestCase):
         omitted = self.manifests()
         direct, _ = self.run_hook("direct", consent="1")
         self.assertEqual(direct, self.direct_commands(inventory))
+        os_name = self.render_text("{{ .chezmoi.os }}")
         expected_resolvable = {
             name for name, tool in inventory.items()
             if tool["status"] == "active"
-            and set(tool["providers"]).intersection(BACKENDS)
+            and any(backend in BACKENDS and
+                    os_name in spec.get("platforms", [os_name])
+                    for backend, spec in tool["providers"].items())
         }
         self.assertEqual(set(omitted[1]), expected_resolvable)
         self.assertEqual(len(self.requests(omitted[0])), len(expected_resolvable))
@@ -317,11 +363,15 @@ class PackageGroupsTest(unittest.TestCase):
         group, binaries, _ = self.manifests()
         self.assertCountEqual(
             self.requests(group),
-            [("mise", "hugo"), ("mise", "node"), ("mise", "vale"), ("mise", "zola")],
+            [("mise", "hugo"), ("mise", "node"), ("mise", "vale"), ("mise", "zola")] +
+            ([("brew", "logseq"), ("brew", "obsidian")]
+             if self.render_text("{{ .chezmoi.os }}") == "darwin" else []),
         )
         self.assertEqual(
             binaries,
-            {"hugo": "hugo", "node": "node", "vale": "vale", "zola": "zola"},
+            {"hugo": "hugo", "node": "node", "vale": "vale", "zola": "zola", **(
+                {"logseq": "logseq", "obsidian": "obsidian"}
+                if self.render_text("{{ .chezmoi.os }}") == "darwin" else {})},
         )
         self.assertEqual(self.run_hook("direct", consent="1")[0], [
             ["mise", "use", "--global", "--quiet", "npm:markdownlint-cli@latest"],
@@ -519,8 +569,11 @@ class PackageGroupsTest(unittest.TestCase):
         self.assertNotIn("(?i)npm:markdownlint-cli('s)?", entries)
         # Vale.Terms enforces an entry's casing, so lowercase names are
         # case-insensitive and a sentence may still open with one.
-        self.assertTrue(all(entry.startswith("(?i)") for entry in entries))
-        self.assertEqual(entries, sorted(set(entries)))
+        self.assertIn("md\\.obsidian\\.Obsidian('s)?", entries)
+        self.assertIn("com\\.logseq\\.Logseq('s)?", entries)
+        self.assertTrue(all(entry.startswith("(?i)") for entry in entries
+                            if entry not in ("md\\.obsidian\\.Obsidian('s)?", "com\\.logseq\\.Logseq('s)?")))
+        self.assertEqual(len(entries), len(set(entries)))
 
     def test_no_backend_is_an_empty_list_not_an_empty_backend_name(self):
         for backend in BACKENDS:

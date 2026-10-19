@@ -25,4 +25,7 @@
 {{- $vendor = and (or (ne (lookPath "dnf") "") (ne (lookPath "rpm-ostree") "")) (ne (lookPath "rpm") "") -}}
 {{- end -}}{{- end -}}
 {{- if $vendor -}}{{- $out = append $out "1password-vendor" -}}{{- end -}}
+{{- if and (ne (lookPath "python3") "") (ne (lookPath "curl") "") (or (and (eq .chezmoi.os "linux") (has .chezmoi.arch (list "amd64" "arm64"))) (and (eq .chezmoi.os "darwin") (eq .chezmoi.arch "arm64"))) -}}
+{{- $out = append $out "delta-release" -}}
+{{- end -}}
 {{ $out | join " " }}

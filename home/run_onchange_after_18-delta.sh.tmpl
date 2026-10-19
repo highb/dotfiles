@@ -1,0 +1,15 @@
+#!/bin/sh
+# Install delta.dev from release archives using our local tool, never install.sh.
+# install consent: {{ eq (env "DOTFILES_INSTALL_PACKAGES") "1" }}
+{{- $r := includeTemplate "package-resolution" . | fromJson }}
+# selected Delta packages: {{ get $r.assigned "delta-release" | toJson }}
+set -eu
+{{ if get (get . "machine" | default dict) "manualProvisioning" }}
+exit 0 # Manual provisioning.
+{{ else if not (get $r.assigned "delta-release") }}
+exit 0 # Unselected, excluded, unsupported, or provider unavailable.
+{{ else }}
+{{ includeTemplate "package-runtime" . }}
+package_consent || exit 0
+exec python3 "$HOME/bin/install-delta"
+{{ end }}

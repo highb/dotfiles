@@ -37,6 +37,7 @@ class DeploymentTest(unittest.TestCase):
             "run_onchange_after_10-mise-direct.sh.tmpl",
             "run_onchange_after_15-1password-apt.sh.tmpl",
             "run_onchange_after_16-1password-vendor.sh.tmpl",
+            "run_onchange_after_18-delta.sh.tmpl",
             "run_onchange_after_20-metapac-sync.sh.tmpl",
             "run_onchange_after_25-vale-sync.sh.tmpl",
             "run_after_30-pre-commit.sh.tmpl",
@@ -240,7 +241,7 @@ class DeploymentTest(unittest.TestCase):
         self.targets(["writing"], manualProvisioning=False)
         scripts = set(self.command("managed", "--include=scripts").splitlines())
         self.assertEqual(scripts, {
-            "10-mise-direct.sh", "15-1password-apt.sh", "16-1password-vendor.sh", "20-metapac-sync.sh", "25-vale-sync.sh", "30-pre-commit.sh",
+            "10-mise-direct.sh", "15-1password-apt.sh", "16-1password-vendor.sh", "18-delta.sh", "20-metapac-sync.sh", "25-vale-sync.sh", "30-pre-commit.sh",
         })
 
     def test_hook_skips_when_tools_are_not_selected_or_installed(self):

@@ -37,9 +37,9 @@ packages:
     development: [build-essential, direnv, exercism, gh, git, httpie, kickstart, node, pre-commit, ruby, rust, trufflehog, vale, vim, xh, wl-clipboard, xclip]
     cloud: [awscli, google-cloud-cli]
     kubernetes: [helm, k3d, kubectl, kubie, kustomize]
-    writing: [hugo, markdownlint-cli, node, prettier, vale, zola]
+    writing: [hugo, logseq, markdownlint-cli, node, obsidian, prettier, vale, zola]
     desktop: [1password, 1password-cli, code, discord, ghostty, slack, wl-clipboard, xclip]
-    ai: [oh-my-pi, wl-clipboard, xclip]
+    ai: [codex, delta, fx, oh-my-pi, wl-clipboard, xclip]
 
   # Which backend wins, most preferred first. This is the layer metapac does
   # not have: it treats every enabled backend independently, so without this a
@@ -165,6 +165,24 @@ packages:
       providers:
         mise: { name: chezmoi }
         brew: { name: chezmoi }
+
+    codex:
+      status: active
+      note: "OpenAI Codex CLI; mise installs native releases without a vendor shell installer."
+      providers:
+        mise: { name: codex }
+
+    delta:
+      status: active
+      note: "delta.dev AI app, not git-delta. Repo-owned install-delta downloads archives; no vendor installer scripts."
+      providers:
+        delta-release: { name: delta, binary: delta }
+
+    fx:
+      status: mise-direct
+      note: "fx.sh coding agent, not antonmedv/fx. Direct GitHub release via mise; no setup.sh."
+      providers:
+        mise: { name: "github:vercel-labs/fx", binary: fx }
 
     code:
       status: active
@@ -331,6 +349,20 @@ packages:
       providers:
         mise: { name: kustomize }
         brew: { name: kustomize }
+
+    logseq:
+      status: active
+      note: "Linux uses the Flathub file-based release; macOS uses the Homebrew cask. Release tracks may differ."
+      providers:
+        brew: { name: logseq, platforms: [darwin] }
+        flatpak: { name: "user:com.logseq.Logseq", binary: flatpak, options: { remote: flathub } }
+
+    obsidian:
+      status: active
+      providers:
+        brew: { name: obsidian, platforms: [darwin] }
+        flatpak: { name: "user:md.obsidian.Obsidian", binary: flatpak, options: { remote: flathub } }
+        snap: { name: obsidian, options: { confinement: classic } }
 
     magic-wormhole:
       status: active

@@ -26,7 +26,9 @@ no entry for it or is not used on this platform.
 {{- range $k, $v := $opts }}{{ $pairs = append $pairs (printf "%s = %s" $k (includeTemplate "toml-value" $v)) }}{{ end }}
   { name = "{{ $item.spec.name }}"{{ if $opts }}, options = { {{ $pairs | join ", " }} }{{ end }} },
 {{- end }}
-] }
+]{{ if eq $backend "flatpak" }}, repos = [
+  { name = "user:flathub", options = { url = "https://dl.flathub.org/repo/flathub.flatpakrepo" } },
+]{{ end }} }
 {{- end }}
 {{- end }}
 {{ if $unresolved }}

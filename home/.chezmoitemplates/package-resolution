@@ -11,7 +11,7 @@
 {{- /* Vendor hooks participate in availability/resolution, but are never
        emitted as metapac backends. */ -}}
 {{- $available := $enabled -}}
-{{- $enabled = without $enabled "1password-vendor" -}}
+{{- $enabled = without $enabled "1password-vendor" "delta-release" -}}
 {{- $assigned := dict -}}
 {{- $unresolved := list -}}
 {{- range $name, $tool := $selection.tools -}}
@@ -25,7 +25,10 @@
 {{-     $chosen := "" -}}
 {{-     range $backend := $candidates -}}
 {{-       if and (eq $chosen "") (has $backend $available) (hasKey $provs $backend) -}}
-{{-         $chosen = $backend -}}
+{{-         $spec := index $provs $backend -}}
+{{-         if has $.chezmoi.os (get $spec "platforms" | default (list $.chezmoi.os)) -}}
+{{-           $chosen = $backend -}}
+{{-         end -}}
 {{-       end -}}
 {{-     end -}}
 {{-     if eq $chosen "" -}}

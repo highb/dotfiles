@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+"""Install delta.dev release archives without executing upstream installers."""
+
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import re
+import shutil
+import subprocess
+import tarfile
+import tempfile
+
+
+def target():
+    system = platform.system()
+    arch = {"x86_64": "x86_64", "amd64": "x86_64",
+            "arm64": "aarch64", "aarch64": "aarch64"}.get(platform.machine())
+    if system not in ("Linux", "Darwin") or not arch:
+        raise ValueError("Delta supports Linux x86_64/ARM64 and Apple Silicon macOS.")
+    if system == "Darwin":
+        if arch != "aarch64" or int(platform.mac_ver()[0].split('.')[0]) < 13:
+            raise ValueError("Delta requires Apple Silicon and macOS 13 or later.")
+        return "macos", arch
+    if platform.libc_ver()[0] != "glibc":
+        raise ValueError("Delta requires glibc Linux.")
+    return "linux", arch
+
+
+def fetch(url, destination):
+    subprocess.run([
+        "curl", "--fail", "--silent", "--show-error", "--location",
+        "--proto", "=https", "--proto-redir", "=https", "--tlsv1.2",
+        url, "-o", str(destination),
+    ], check=True)
+
+
+def release(system, arch, version, work):
+    if version:
+        if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+            raise ValueError("Version must be a stable version such as 0.20.1.")
+        asset = (f"macos/{arch}/Delta.app.zip" if system == "macos"
+                 else f"delta-linux-{arch}.tar.gz")
+        return version, f"https://releases.delta.dev/releases/stable/{version}/{asset}"
+    metadata = work / "release.json"
+    fetch(f"https://delta.dev/api/releases/stable/latest/asset?asset=delta&os={system}&arch={arch}", metadata)
+    info = json.loads(metadata.read_text())
+    # Validate against our own versioned URL construction, rather than executing
+    # code or following arbitrary release metadata to a different download host.
+    resolved_version, url = release(system, arch, info["version"], work)
+    if info["url"] != url:
+        raise ValueError("Unexpected Delta release URL; review the upstream archive layout.")
+    return resolved_version, url
+
+
+def extract(archive, work, system):
+    unpacked = work / "unpacked"
+    unpacked.mkdir()
+    if system == "macos":
+        # ditto preserves signed app bundle metadata and framework symlinks.
+        subprocess.run(["ditto", "-x", "-k", str(archive), str(unpacked)], check=True)
+        bundle = unpacked / "Delta.app"
+        subprocess.run(["codesign", "--verify", "--deep", "--strict", str(bundle)], check=True)
+    else:
+        if not hasattr(tarfile, "data_filter"):
+            raise ValueError("Update Python: safe tar extraction requires tarfile.data_filter.")
+        with tarfile.open(archive) as source:
+            source.extractall(unpacked, filter="data")
+        bundle = unpacked / "Delta"
+    return bundle
+
+
+def install(bundle, app, relative_cli, link, receipt):
+    cli = bundle / relative_cli
+    if not cli.is_file() or not os.access(cli, os.X_OK):
+        raise ValueError("Archive is missing Delta's executable; nothing installed.")
+    if link.is_symlink():
+        if link.resolve() != (app / relative_cli).resolve():
+            raise ValueError(f"Unrelated command at {link}; resolve the conflict first.")
+    elif link.exists():
+        raise ValueError(f"Unrelated command at {link}; resolve the conflict first.")
+    if app.is_symlink():
+        raise ValueError(f"Refusing to replace symlink at {app}.")
+    app.parent.mkdir(parents=True, exist_ok=True)
+    link.parent.mkdir(parents=True, exist_ok=True)
+    # Stage on the same filesystem. Restore the old bundle if the swap fails.
+    with tempfile.TemporaryDirectory(prefix=".delta-stage-", dir=app.parent) as staging:
+        staged = Path(staging) / "new"
+        backup = Path(staging) / "old"
+        shutil.copytree(bundle, staged, symlinks=True)
+        (staged / ".dotfiles-install.json").write_text(json.dumps(receipt, indent=2) + "\n")
+        if app.exists():
+            app.rename(backup)
+        try:
+            staged.rename(app)
+            if not link.is_symlink():
+                link.symlink_to(app / relative_cli)
+        except Exception:
+            if app.exists():
+                shutil.rmtree(app)
+            if backup.exists():
+                backup.rename(app)
+            raise
+
+
+def integrate(app, relative_cli, link, system):
+    """Repair our CLI link and desktop entry without redownloading the app."""
+    if link.is_symlink():
+        if link.resolve() != (app / relative_cli).resolve():
+            raise ValueError(f"Unrelated command at {link}; resolve the conflict first.")
+    elif link.exists():
+        raise ValueError(f"Unrelated command at {link}; resolve the conflict first.")
+    else:
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(app / relative_cli)
+    if system == "linux":
+        applications = Path.home() / ".local/share/applications"
+        applications.mkdir(parents=True, exist_ok=True)
+        # Desktop Exec values have their own quoting rules, not shell quoting.
+        command = str(link).replace("\\", "\\\\").replace('"', '\\"').replace('`', '\\`').replace('$', '\\$').replace('%', '%%')
+        icon = app / "share/icons/hicolor/512x512/apps/dev.zed.Delta.png"
+        (applications / "dev.zed.Delta.desktop").write_text(
+            '[Desktop Entry]\nType=Application\nName=Delta\n'
+            f'Exec="{command}" open %U\nIcon={icon}\n'
+            'Terminal=false\nCategories=Development;IDE;\n'
+            'StartupWMClass=dev.zed.Delta\nMimeType=x-scheme-handler/delta;\n'
+        )
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--version", help="Install a specific stable release instead of latest")
+    parser.add_argument("--sha256", help="Require this archive SHA256 digest")
+    parser.add_argument("--dry-run", action="store_true", help="Resolve and print the release; install nothing")
+    parser.add_argument("--upgrade", action="store_true", help="Replace an existing installation; close Delta first")
+    parser.add_argument("--status", action="store_true", help="Print local paths and receipt without network access")
+    args = parser.parse_args()
+    system, arch = target()
+    home = Path.home()
+    app = home / ("Applications/Delta.app" if system == "macos" else ".local/delta.app")
+    relative_cli = Path("Contents/MacOS/delta" if system == "macos" else "bin/delta")
+    link = home / ".local/bin/delta"
+    receipt_file = app / ".dotfiles-install.json"
+    if args.status:
+        print(json.dumps({"app": str(app), "cli": str(link),
+                          "installed": (app / relative_cli).is_file(),
+                          "receipt": json.loads(receipt_file.read_text()) if receipt_file.exists() else None}, indent=2))
+        return
+    if not args.dry_run and not args.upgrade and (app / relative_cli).is_file():
+        integrate(app, relative_cli, link, system)
+        print(f"Delta already installed at {app}; use --upgrade to replace it.")
+        return
+    if args.sha256 and not re.fullmatch(r"[0-9a-fA-F]{64}", args.sha256):
+        raise ValueError("SHA256 must contain 64 hexadecimal characters.")
+    with tempfile.TemporaryDirectory(prefix="delta-download-") as temporary:
+        work = Path(temporary)
+        version, url = release(system, arch, args.version, work)
+        receipt = {"version": version, "url": url, "os": system, "arch": arch}
+        if args.dry_run:
+            print(json.dumps({**receipt, "app": str(app), "cli": str(link)}, indent=2))
+            return
+        archive = work / ("Delta.zip" if system == "macos" else "Delta.tar.gz")
+        fetch(url, archive)
+        with archive.open("rb") as stream:
+            digest = hashlib.file_digest(stream, "sha256").hexdigest()
+        if args.sha256 and digest != args.sha256.lower():
+            raise ValueError("Archive SHA256 mismatch; nothing installed.")
+        receipt["sha256"] = digest
+        bundle = extract(archive, work, system)
+        install(bundle, app, relative_cli, link, receipt)
+    integrate(app, relative_cli, link, system)
+    print(f"Installed Delta {version}: {link}")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (ValueError, OSError, KeyError, subprocess.CalledProcessError, tarfile.TarError) as error:
+        raise SystemExit(f"install-delta: {error}") from None

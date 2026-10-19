@@ -156,9 +156,13 @@ For TOML, add `packageGroups = ["core", "shell"]` under `[data.machine]`.
 | `development` | build-essential, direnv, exercism, gh, git, httpie, kickstart, node, pre-commit, ruby, rust, trufflehog, vale, vim, xh, wl-clipboard and xclip (Linux) |
 | `cloud` | awscli, google-cloud-cli |
 | `kubernetes` | helm, k3d, kubectl, kubie, kustomize |
-| `writing` | hugo, markdownlint-cli, node, prettier, vale, zola |
+| `writing` | hugo, logseq, markdownlint-cli, node, obsidian, prettier, vale, zola |
 | `desktop` | 1password, 1password-cli, code, discord, ghostty, slack, wl-clipboard and xclip (Linux) |
-| `ai` | oh-my-pi, wl-clipboard and xclip (Linux) |
+| `ai` | codex, delta, fx, oh-my-pi, wl-clipboard and xclip (Linux) |
+
+See [Writing and AI applications](docs/writing-and-ai-apps.md) for providers,
+installation, local verification, first-run setup, and updates. The `writing`
+group includes GUI note-taking apps, even without the `desktop` group.
 
 Groups combine without duplicate installs. No group is mandatory; include `core`
 explicitly if wanted. Required runtimes are listed alongside their tools:
@@ -199,8 +203,9 @@ Keep that hard stop and install selected tools manually, or set it to `false`
 to use interactive confirmation or automation consent. For manual provisioning, install selected
 `mise-direct` tools explicitly, then run
 `metapac --config-dir "${XDG_CONFIG_HOME:-$HOME/.config}/metapac" sync`.
+Delta uses the repo-owned `install-delta` command separately from metapac.
 The direct tools are `npm:markdownlint-cli` and `npm:prettier` in `writing`,
-and `github:can1357/oh-my-pi` in `ai`; exclusions still apply.
+and `github:can1357/oh-my-pi` plus `github:vercel-labs/fx` in `ai`; exclusions still apply.
 
 Deselecting a group stops requesting its packages; it does **not** uninstall
 them or remove existing mise settings. Do not use `metapac clean` as part of
