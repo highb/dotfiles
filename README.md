@@ -429,6 +429,9 @@ and do not persist checkout credentials or receive repository secrets.
 
 ## TODO
 
+See [the documentation plan](TODO.md) for the phased audit, workflow coverage,
+and verification needed to make this environment independently usable.
+
 - `metapac --config-dir "${XDG_CONFIG_HOME:-$HOME/.config}/metapac" sync`
   to install the tools `shell.yaml` assumes: `fd`, `bat`, `eza`,
   `zoxide` (`atuin` is still unresolvable — brew only, and there is no brew here)
